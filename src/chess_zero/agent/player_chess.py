@@ -20,7 +20,7 @@ if platform.system() != "Windows":
     import uvloop
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-CounterKey = namedtuple("CounterKey", "board next_player")
+CounterKey = namedtuple("CounterKey", "board next_player")  # Used for saving the status.
 QueueItem = namedtuple("QueueItem", "state future")
 HistoryItem = namedtuple("HistoryItem", "action policy values visit")
 
@@ -37,10 +37,14 @@ class ChessPlayer:
 
         self.move_lookup = {k:v for k,v in zip((chess.Move.from_uci(move) for move in self.config.labels),range(len(self.config.labels)))}
         self.labels_n = config.n_labels
+        # visit count
         self.var_n = defaultdict(lambda: np.zeros((self.labels_n,)))
+        # total action value
         self.var_w = defaultdict(lambda: np.zeros((self.labels_n,)))
+        # mean action value
         self.var_q = defaultdict(lambda: np.zeros((self.labels_n,)))
         self.var_u = defaultdict(lambda: np.zeros((self.labels_n,)))
+        # prior probability of selecting that edge
         self.var_p = defaultdict(lambda: np.zeros((self.labels_n,)))
         self.expanded = set()
         self.now_expanding = set()
@@ -173,7 +177,8 @@ class ChessPlayer:
 
     @profile
     async def expand_and_evaluate(self, env):
-        """expand new leaf
+        """
+        MCTS expand and evaluate
 
         update var_p, return leaf_v
 
@@ -218,6 +223,12 @@ class ChessPlayer:
                 item.future.set_result((p, v))
 
     async def predict(self, x):
+        """
+        Use CNN to predict the policy and the value.
+        For better performance, add the task to the queue.
+        :param x: chessboard status.
+        :return:
+        """
         future = self.loop.create_future()
         item = QueueItem(x, future)
         await self.prediction_queue.put(item)
@@ -249,15 +260,25 @@ class ChessPlayer:
 
     @staticmethod
     def counter_key(env: ChessEnv):
+        """
+        Return the chessboard status by FEN(custom) and game turn.
+        :param env:
+        :return:
+        """
         return CounterKey(env.replace_tags(), env.board.turn)
 
     def select_action_q_and_u(self, env, is_root_node):
+        """
+        MCTS select 
+        """
         key = self.counter_key(env)
 
         """Bottlenecks are these two lines"""
         legal_moves = [self.move_lookup[mov] for mov in env.board.legal_moves]
         legal_labels = np.zeros(len(self.config.labels))
         #logger.debug(legal_moves)
+
+        # mark the actions that are legal to move.
         legal_labels[legal_moves] = 1
 
 

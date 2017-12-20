@@ -125,6 +125,11 @@ class ChessEnv:
         return board_white, board_black
 
     def replace_tags(self):
+        """
+        Forsyth?Edwards Notation (FEN) is a standard notation for describing a particular board position of a chess game.
+        The purpose of FEN is to provide all the necessary information to restart a game from a particular position.
+        :return:
+        """
         board_san = self.board.fen()
         board_san = board_san.split(" ")[0]
         board_san = board_san.replace("2", "11")
