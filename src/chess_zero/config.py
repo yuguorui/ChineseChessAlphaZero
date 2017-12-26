@@ -43,6 +43,62 @@ def create_uci_labels():
     return labels_array
 
 
+def create_ucci_labels():
+    labels_array = []
+    letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
+    numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    
+    for l1 in range(9):
+        for n1 in range(10):
+            # 一些通用行走规则 车 马 王 兵/卒 将
+            destinations = [(t, n1) for t in range(0, 9)] + \
+                           [(l1, t) for t in range(0, 10)] + \
+                           [(l1 + a, n1 + b) for (a, b) in
+                            [(-2, -1), (-1, -2), (-2, 1), (1, -2), (2, -1), (-1, 2), (2, 1), (1, 2)]]
+            for (l2, n2) in destinations:
+                if (l1, n1) != (l2, n2) and l2 in range(0, 9) and n2 in range(0, 10):
+                    move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
+                    labels_array.append(move)
+    # 某些棋子走法只会出现在特定点，象/相 士/仕
+    elephant_red = [(0, 2), (2, 0), (2, 4), (4, 2), (6, 0), (6, 4), (8, 2)]
+    for (l1, n1) in elephant_red:
+        destinations = [
+            (l1 + a, n1 + b) for (a, b) in [(2, 2), (2, -2), (-2, 2), (-2, -2)]
+        ]
+        for (l2, n2) in destinations:
+            if (l1, n1) != (l2, n2) and l2 in range(0, 9) and n2 in range(0, 5):
+                move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
+                labels_array.append(move)
+    elephant_black = [(0, 7), (2, 5), (2, 9), (4, 7), (6, 5), (6, 9), (8, 7)]
+    for (l1, n1) in elephant_black:
+        destinations = [
+            (l1 + a, n1 + b) for (a, b) in [(2, 2), (2, -2), (-2, 2), (-2, -2)]
+        ]
+        for (l2, n2) in destinations:
+            if (l1, n1) != (l2, n2) and l2 in range(0, 9) and n2 in range(5, 10):
+                move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
+                labels_array.append(move)
+    advisor_red = [(3, 0), (3, 2), (4, 1), (5, 0), (5, 2)]
+    for (l1, n1) in advisor_red:
+        destinations = [
+            (l1 + a, n1 + b) for (a, b) in [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        ]
+        for (l2, n2) in destinations:
+            if (l1, n1) != (l2, n2) and l2 in range(3, 6) and n2 in range(0, 3):
+                move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
+                labels_array.append(move)
+    advisor_black = [(3, 7), (3, 9), (4, 8), (5, 7), (5, 9)]
+    for (l1, n1) in advisor_black:
+        destinations = [
+            (l1 + a, n1 + b) for (a, b) in [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        ]
+        for (l2, n2) in destinations:
+            if (l1, n1) != (l2, n2) and l2 in range(3, 6) and n2 in range(7, 10):
+                move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
+                labels_array.append(move)
+    return labels_array
+
+
 class Config:
     def __init__(self, config_type="mini"):
         self.opts = Options()
