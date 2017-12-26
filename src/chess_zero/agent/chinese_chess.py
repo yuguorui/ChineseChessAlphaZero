@@ -165,13 +165,13 @@ def _sliding_attacks(square, occupied, deltas, limit=_default_limit):
 
 BB_HORSE_ATTACKS = [_sliding_attacks(sq, BB_ALL, [19, 17, 11, 7, -19, -17, -11, -7]) for sq in SQUARES]
 BB_KING_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_white_limit) for sq in SQUARES],
-				   [_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_black_limit) for sq in SQUARES]]
+					[_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_black_limit) for sq in SQUARES]]
 BB_ELEPHANT_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_white_limit) for sq in SQUARES],
-					   [_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_black_limit) for sq in SQUARES]]
+						[_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_black_limit) for sq in SQUARES]]
 BB_ADVISOR_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_white_limit) for sq in SQUARES],
-					  [_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_black_limit) for sq in SQUARES]]
+						[_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_black_limit) for sq in SQUARES]]
 BB_PAWN_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [-1, 1, 9], _pawn_white_limit) for sq in SQUARES],
-				   [_sliding_attacks(sq, BB_ALL, [-1, 1, -9], _pawn_black_limit) for sq in SQUARES]]
+					[_sliding_attacks(sq, BB_ALL, [-1, 1, -9], _pawn_black_limit) for sq in SQUARES]]
 
 BB_FILES = [
 	BB_FILE_A,
@@ -332,9 +332,6 @@ class Move(object):
 		forfeits en passant capturing). Null moves evaluate to ``False`` in
 		boolean contexts.
 
-		>>> import chess
-		>>>
-		>>> bool(chess.Move.null())
 		False
 		"""
 		return cls(0, 0)
@@ -846,8 +843,7 @@ class Board(BaseBoard):
 		checkers = self.attackers_mask(not self.turn, king)
 		if checkers:
 			# If already in check, look if it is an evasion.
-			if move not in self._generate_evasions(king, checkers, BB_SQUARES[move.from_square],
-												   BB_SQUARES[move.to_square]):
+			if move not in self._generate_evasions(king, checkers, BB_SQUARES[move.from_square], BB_SQUARES[move.to_square]):
 				return True
 		
 		# return not self._is_safe(king, self._slider_blockers(king), move)
@@ -945,7 +941,7 @@ class Board(BaseBoard):
 			return not self.is_attacked_by(not self.turn, move.to_square)
 		else:
 			return not blockers & BB_SQUARES[move.from_square] or BB_RAYS[move.from_square][move.to_square] & \
-				   BB_SQUARES[king]
+					BB_SQUARES[king]
 	
 	def generate_legal_moves(self, from_mask=BB_ALL, to_mask=BB_ALL):
 		if self.is_variant_end():
@@ -992,6 +988,50 @@ class Board(BaseBoard):
 			return True
 		
 		return False
+	
+	def result(self, claim_draw=False):
+		"""
+		Gets the game result.
+
+		``1-0``, ``0-1`` or ``1/2-1/2`` if the
+		:func:`game is over <chess.Board.is_game_over()>`. Otherwise, the
+		result is undetermined: ``*``.
+		"""
+		
+		# Checkmate.
+		if self.is_checkmate():
+			return "0-1" if self.turn == WHITE else "1-0"
+		
+		# Draw claimed.
+		if claim_draw:		# and self.can_claim_draw():
+			return "1/2-1/2"
+		
+		# Seventyfive-move rule or fivefold repetition.
+		if self.is_seventyfive_moves():		# or self.is_fivefold_repetition():
+			return "1/2-1/2"
+		
+		# # Insufficient material.
+		# if self.is_insufficient_material():
+		# 	return "1/2-1/2"
+		
+		# Stalemate.
+		if not any(self.generate_legal_moves()):
+			return "1/2-1/2"
+		
+		# Undetermined.
+		return "*"
+	
+	def is_check(self):
+		"""Returns if the current side to move is in check."""
+		king = self.king(self.turn)
+		return king is not None and self.is_attacked_by(not self.turn, king)
+	
+	def is_checkmate(self):
+		"""Checks if the current position is a checkmate."""
+		if not self.is_check():
+			return False
+		
+		return not any(self.generate_legal_moves())
 	
 	def is_seventyfive_moves(self):
 		"""
