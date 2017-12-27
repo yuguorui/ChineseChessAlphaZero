@@ -13,7 +13,7 @@ import numpy as np
 
 from chess_zero.agent.api_chess import ChessModelAPI
 from chess_zero.config import Config
-# from chess_zero.env.chess_env import ChessEnv, Winner
+from chess_zero.env.chess_env import Winner
 from chess_zero.env.chess_env import ChineseChessEnv
 from chess_zero.agent import chinese_chess
 
@@ -154,7 +154,7 @@ class ChineseChessPlayer:
         # is leaf?
         if key not in self.expanded:  # reach leaf node
             leaf_v = await self.expand_and_evaluate(env)
-            if env.board.turn == ChineseChessEnv.WHITE:
+            if env.board.turn == chinese_chess.WHITE:
                 return leaf_v  # Value for white
             else:
                 return -leaf_v  # Value for white == -Value for white
@@ -191,7 +191,7 @@ class ChineseChessPlayer:
         self.now_expanding.add(key)
 
         black_ary, white_ary = env.black_and_white_plane()
-        state = [black_ary, white_ary] if env.board.turn == ChineseChessEnv.BLACK else [white_ary, black_ary]
+        state = [black_ary, white_ary] if env.board.turn == chinese_chess.BLACK else [white_ary, black_ary]
         future = await self.predict(np.array(state))  # type: Future
 
         await future
@@ -294,7 +294,7 @@ class ChineseChessPlayer:
                  self.play_config.noise_eps * np.random.dirichlet([self.play_config.dirichlet_alpha] * self.labels_n)
 
         u_ = self.play_config.c_puct * p_ * xx_ / (1 + self.var_n[key])
-        if env.board.turn == ChineseChessEnv.WHITE:
+        if env.board.turn == chinese_chess.WHITE:
             v_ = (self.var_q[key] + u_ + 1000) * legal_labels
         else:
             # When enemy's selecting action, flip Q-Value.

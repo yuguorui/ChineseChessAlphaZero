@@ -30,7 +30,7 @@ class ChineseChessEnv:
         return self
 
     def update(self, board):
-        self.board = board
+        self.board = Board(board)
         self.turn = self.board.fullmove_number
         self.done = False
         self.winner = None
@@ -46,7 +46,8 @@ class ChineseChessEnv:
 
         self.turn += 1
 
-        if check_over and (self.board.is_game_over() or self.board.can_claim_threefold_repetition()):
+        if check_over and (self.board.is_game_over()
+                           or self.board.can_claim_threefold_repetition()):
             self._game_over()
 
         return self.board, {}
@@ -77,8 +78,14 @@ class ChineseChessEnv:
 
     def score_board(self):
         board_state = self.replace_tags()
-        pieces_white = [val if val.isupper() and val != "1" else 0 for val in board_state.split(" ")[0]]
-        pieces_black = [val if val.islower() and val != "1" else 0 for val in board_state.split(" ")[0]]
+        pieces_white = [
+            val if val.isupper() and val != "1" else 0
+            for val in board_state.split(" ")[0]
+        ]
+        pieces_black = [
+            val if val.islower() and val != "1" else 0
+            for val in board_state.split(" ")[0]
+        ]
         val_white = 0.0
         val_black = 0.0
         for piece in pieces_white:
@@ -105,7 +112,6 @@ class ChineseChessEnv:
                 val_black += 1
         return val_black, val_white
 
-
     def _resigned(self):
         self._win_another_player()
         self._game_over()
@@ -119,11 +125,19 @@ class ChineseChessEnv:
 
     def black_and_white_plane(self):
         board_state = self.replace_tags()
-        board_white = [ord(val) if val.isupper() and val != "1" else 0 for val in board_state.split(" ")[0]]
-        board_white = np.reshape(board_white, (8, 8))
+        # 大写代表白方
+        board_white = [
+            ord(val) if val.isupper() and val != "1" else 0
+            for val in board_state.split(" ")[0]
+        ]
+        # 将其整理为10x9的矩阵
+        board_white = np.reshape(board_white, (10, 9))
         # Only black plane
-        board_black = [ord(val) if val.islower() and val != "1" else 0 for val in board_state.split(" ")[0]]
-        board_black = np.reshape(board_black, (8, 8))
+        board_black = [
+            ord(val) if val.islower() and val != "1" else 0
+            for val in board_state.split(" ")[0]
+        ]
+        board_black = np.reshape(board_black, (10, 9))
 
         return board_white, board_black
 
@@ -142,6 +156,7 @@ class ChineseChessEnv:
         board_san = board_san.replace("6", "111111")
         board_san = board_san.replace("7", "1111111")
         board_san = board_san.replace("8", "11111111")
+        board_san = board_san.replace("9", "111111111")
 
         return board_san.replace("/", "")
 

@@ -10,7 +10,7 @@ from time import time
 import chess
 from chess_zero.agent.player_chess import ChineseChessPlayer
 from chess_zero.config import Config
-from chess_zero.env.chess_env import ChessEnv, Winner
+from chess_zero.env.chess_env import ChineseChessEnv, Winner
 from chess_zero.lib import tf_util
 from chess_zero.lib.data_helper import get_game_data_filenames, write_game_data_to_file
 from chess_zero.lib.model_helper import load_best_model_weight, save_as_best_model, \
@@ -20,8 +20,8 @@ logger = getLogger(__name__)
 
 
 def start(config: Config):
-    tf_util.set_session_config(per_process_gpu_memory_fraction=0.5)
-    return SelfPlayWorker(config, env=ChessEnv()).start()
+    # tf_util.set_session_config(per_process_gpu_memory_fraction=0.5)
+    return SelfPlayWorker(config, env=ChineseChessEnv()).start()
 
 
 class SelfPlayWorker:
