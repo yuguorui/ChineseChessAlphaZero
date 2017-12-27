@@ -18,11 +18,13 @@ from chess_zero.env.chess_env import ChineseChessEnv
 from chess_zero.agent import chinese_chess
 
 import platform
+
 if platform.system() != "Windows":
     import uvloop
+
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-CounterKey = namedtuple("CounterKey", "board next_player")  # Used for saving the status.
+StateKey = namedtuple("StateKey", "board next_player")  # Used for saving the status.
 QueueItem = namedtuple("QueueItem", "state future")
 HistoryItem = namedtuple("HistoryItem", "action policy values visit")
 
@@ -37,7 +39,8 @@ class ChineseChessPlayer:
         self.play_config = play_config or self.config.play
         self.api = ChessModelAPI(self.config, self.model)
 
-        self.move_lookup = {k:v for k,v in zip((chinese_chess.Move.from_ucci(move) for move in self.config.labels),range(len(self.config.labels)))}
+        self.move_lookup = {k: v for k, v in zip((chinese_chess.Move.from_ucci(move) for move in self.config.labels),
+                                                 range(len(self.config.labels)))}
         self.labels_n = config.n_labels
         # visit count
         self.var_n = defaultdict(lambda: np.zeros((self.labels_n,)))
@@ -77,7 +80,7 @@ class ChineseChessPlayer:
     def action(self, board):
 
         env = ChineseChessEnv().update(board)
-        key = self.counter_key(env)
+        key = self.state_key(env)
 
         for tl in range(self.play_config.thinking_loop):
             if tl > 0 and self.play_config.logging_thinking:
@@ -86,15 +89,16 @@ class ChineseChessPlayer:
             self.search_moves(board)
             policy = self.calc_policy(board)
             action = int(np.random.choice(range(self.labels_n), p=policy))
-            action_by_value = int(np.argmax(self.var_q[key] + (self.var_n[key] > 0)*100))
+            action_by_value = int(np.argmax(self.var_q[key] + (self.var_n[key] > 0) * 100))
             if action == action_by_value or env.turn < self.play_config.change_tau_turn:
                 break
 
         # this is for play_gui, not necessary when training.
-        self.thinking_history[env.observation] = HistoryItem(action, policy, list(self.var_q[key]), list(self.var_n[key]))
+        self.thinking_history[env.observation] = HistoryItem(action, policy, list(self.var_q[key]),
+                                                             list(self.var_n[key]))
 
         if self.play_config.resign_threshold is not None and \
-            env.score_current() <= self.play_config.resign_threshold and \
+                env.score_current() <= self.play_config.resign_threshold and \
                 self.play_config.min_resign_turn < env.turn:
             return None  # means resign
         else:
@@ -117,7 +121,7 @@ class ChineseChessPlayer:
 
         coroutine_list.append(self.prediction_worker())
         loop.run_until_complete(asyncio.gather(*coroutine_list))
-        #logger.debug(f"Search time per move: {time.time()-start}")
+        # logger.debug(f"Search time per move: {time.time()-start}")
         # uncomment to see profile result per move
         # raise
 
@@ -146,7 +150,7 @@ class ChineseChessPlayer:
             else:
                 return 0
 
-        key = self.counter_key(env)
+        key = self.state_key(env)
 
         while key in self.now_expanding:
             await asyncio.sleep(self.config.play.wait_for_expanding_sleep_sec)
@@ -187,7 +191,7 @@ class ChineseChessPlayer:
         :param ChineseChessEnv env:
         :return: leaf_v
         """
-        key = self.counter_key(env)
+        key = self.state_key(env)
         self.now_expanding.add(key)
 
         black_ary, white_ary = env.black_and_white_plane()
@@ -218,7 +222,7 @@ class ChineseChessPlayer:
                 await asyncio.sleep(self.config.play.prediction_worker_sleep_sec)
                 continue
             item_list = [q.get_nowait() for _ in range(q.qsize())]  # type: list[QueueItem]
-            #logger.debug(f"predicting {len(item_list)} items")
+            # logger.debug(f"predicting {len(item_list)} items")
             data = np.array([x.state for x in item_list])
             policy_ary, value_ary = self.api.predict(data)
             for p, v, item in zip(policy_ary, value_ary, item_list):
@@ -238,7 +242,6 @@ class ChineseChessPlayer:
 
     def finish_game(self, z):
         """
-
         :param z: win=1, lose=-1, draw=0
         :return:
         """
@@ -251,9 +254,9 @@ class ChineseChessPlayer:
         """
         pc = self.play_config
         env = ChineseChessEnv().update(board)
-        key = self.counter_key(env)
+        key = self.state_key(env)
         if env.turn < pc.change_tau_turn:
-            return self.var_n[key] / (np.sum(self.var_n[key])+1e-8)  # tau = 1
+            return self.var_n[key] / (np.sum(self.var_n[key]) + 1e-8)  # tau = 1
         else:
             action = np.argmax(self.var_n[key])  # tau = 0
             ret = np.zeros(self.labels_n)
@@ -261,28 +264,27 @@ class ChineseChessPlayer:
             return ret
 
     @staticmethod
-    def counter_key(env: ChineseChessEnv):
+    def state_key(env: ChineseChessEnv):
         """
         Return the chessboard status by FEN(custom) and game turn.
         :param env:
         :return:
         """
-        return CounterKey(env.replace_tags(), env.board.turn)
+        return StateKey(env.replace_tags(), env.board.turn)
 
-    def select_action_q_and_u(self, env, is_root_node):
+    def select_action_q_and_u(self, env, is_root_node) -> chinese_chess.Move:
         """
         MCTS select 
         """
-        key = self.counter_key(env)
+        key = self.state_key(env)
 
         """Bottlenecks are these two lines"""
         legal_moves = [self.move_lookup[mov] for mov in env.board.legal_moves]
         legal_labels = np.zeros(len(self.config.labels))
-        #logger.debug(legal_moves)
+        # logger.debug(legal_moves)
 
         # mark the actions that are legal to move.
         legal_labels[legal_moves] = 1
-
 
         # noinspection PyUnresolvedReferences
         xx_ = np.sqrt(np.sum(self.var_n[key]))  # SQRT of sum(N(s, b); for all b)
