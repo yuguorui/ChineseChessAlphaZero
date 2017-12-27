@@ -1,9 +1,14 @@
+#!/usr/bin/env python3
+"""
+    自对弈模块
+"""
+
 import os
 from datetime import datetime
 from logging import getLogger
 from time import time
 import chess
-from chess_zero.agent.player_chess import ChessPlayer
+from chess_zero.agent.player_chess import ChineseChessPlayer
 from chess_zero.config import Config
 from chess_zero.env.chess_env import ChessEnv, Winner
 from chess_zero.lib import tf_util
@@ -30,8 +35,8 @@ class SelfPlayWorker:
         self.config = config
         self.model = model
         self.env = env     # type: ChessEnv
-        self.black = None  # type: ChessPlayer
-        self.white = None  # type: ChessPlayer
+        self.black = None  # type: ChineseChessPlayer
+        self.white = None  # type: ChineseChessPlayer
         self.buffer = []
 
     def start(self):
@@ -53,8 +58,8 @@ class SelfPlayWorker:
 
     def start_game(self, idx):
         self.env.reset()
-        self.black = ChessPlayer(self.config, self.model)
-        self.white = ChessPlayer(self.config, self.model)
+        self.black = ChineseChessPlayer(self.config, self.model)
+        self.white = ChineseChessPlayer(self.config, self.model)
         observation = self.env.observation
         while not self.env.done:
             if self.env.board.turn == chess.BLACK:

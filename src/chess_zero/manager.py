@@ -1,6 +1,6 @@
 import argparse
 
-from logging import getLogger,disable
+from logging import getLogger, disable
 
 from .lib.logger import setup_logger
 from .config import Config

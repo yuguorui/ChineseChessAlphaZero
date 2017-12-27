@@ -1,9 +1,9 @@
 from logging import getLogger
 
-import chess
+# import chess
 from chess_zero.config import Config, PlayWithHumanConfig
 from chess_zero.play_game.game_model import PlayWithHuman
-from chess_zero.env.chess_env import ChessEnv
+from chess_zero.env.chess_env import ChineseChessEnv, WHITE, BLACK
 from random import random
 
 logger = getLogger(__name__)
@@ -13,12 +13,13 @@ def start(config: Config):
     PlayWithHumanConfig().update_play_config(config.play)
     chess_model = PlayWithHuman(config)
 
-    env = ChessEnv().reset()
+    env = ChineseChessEnv().reset()
     human_is_black = random() < 0.5
     chess_model.start_game(human_is_black)
+    env.render()
 
     while not env.done:
-        if (env.board.turn == chess.BLACK) == human_is_black:
+        if (env.board.turn == BLACK) == human_is_black:
             action = chess_model.move_by_human(env)
             print("You move to: " + action)
         else:

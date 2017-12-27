@@ -117,7 +117,7 @@ class Config:
         self.play_data = c.PlayDataConfig()
         self.trainer = c.TrainerConfig()
         self.eval = c.EvaluateConfig()
-        self.labels = create_uci_labels()
+        self.labels = create_ucci_labels()
         self.n_labels = len(self.labels)
 
 

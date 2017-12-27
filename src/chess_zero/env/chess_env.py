@@ -1,8 +1,11 @@
 import enum
-import chess.pgn
+from logging import getLogger
+
 import numpy as np
 
-from logging import getLogger
+# import chess.pgn
+from chess_zero.agent.chinese_chess import Board
+from chess_zero.agent.chinese_chess import WHITE, BLACK
 
 logger = getLogger(__name__)
 
@@ -10,7 +13,7 @@ logger = getLogger(__name__)
 Winner = enum.Enum("Winner", "black white draw")
 
 
-class ChessEnv:
+class ChineseChessEnv:
     def __init__(self):
         self.board = None
         self.turn = 0
@@ -19,7 +22,7 @@ class ChessEnv:
         self.resigned = False
 
     def reset(self):
-        self.board = chess.Board()
+        self.board = Board()
         self.turn = 0
         self.done = False
         self.winner = None
@@ -27,7 +30,7 @@ class ChessEnv:
         return self
 
     def update(self, board):
-        self.board = chess.Board(board)
+        self.board = board
         self.turn = self.board.fullmove_number
         self.done = False
         self.winner = None
@@ -67,7 +70,7 @@ class ChessEnv:
 
     def score_current(self):
         val_black, val_white = self.score_board()
-        if self.board.turn == chess.WHITE:
+        if self.board.turn == WHITE:
             return val_black - val_white
         else:
             return val_white - val_black
@@ -109,7 +112,7 @@ class ChessEnv:
         self.resigned = True
 
     def _win_another_player(self):
-        if self.board.turn == chess.BLACK:
+        if self.board.turn == BLACK:
             self.winner = Winner.black
         else:
             self.winner = Winner.white

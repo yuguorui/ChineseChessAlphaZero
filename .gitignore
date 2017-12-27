@@ -19,4 +19,5 @@ tmp.*
 /keys/*
 video/*
 logs/
-*.sh
+*.sh\
+.vscode/

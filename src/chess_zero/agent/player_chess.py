@@ -9,11 +9,13 @@ from profilehooks import profile
 import time
 
 import numpy as np
-import chess
+# import chess
 
 from chess_zero.agent.api_chess import ChessModelAPI
 from chess_zero.config import Config
-from chess_zero.env.chess_env import ChessEnv, Winner
+# from chess_zero.env.chess_env import ChessEnv, Winner
+from chess_zero.env.chess_env import ChineseChessEnv
+from chess_zero.agent import chinese_chess
 
 import platform
 if platform.system() != "Windows":
@@ -27,7 +29,7 @@ HistoryItem = namedtuple("HistoryItem", "action policy values visit")
 logger = getLogger(__name__)
 
 
-class ChessPlayer:
+class ChineseChessPlayer:
     def __init__(self, config: Config, model, play_config=None):
 
         self.config = config
@@ -35,7 +37,7 @@ class ChessPlayer:
         self.play_config = play_config or self.config.play
         self.api = ChessModelAPI(self.config, self.model)
 
-        self.move_lookup = {k:v for k,v in zip((chess.Move.from_uci(move) for move in self.config.labels),range(len(self.config.labels)))}
+        self.move_lookup = {k:v for k,v in zip((chinese_chess.Move.from_ucci(move) for move in self.config.labels),range(len(self.config.labels)))}
         self.labels_n = config.n_labels
         # visit count
         self.var_n = defaultdict(lambda: np.zeros((self.labels_n,)))
@@ -59,7 +61,7 @@ class ChessPlayer:
 
     def sl_action(self, board, action):
 
-        env = ChessEnv().update(board)
+        env = ChineseChessEnv().update(board)
 
         policy = np.zeros(self.labels_n)
         k = 0
@@ -74,7 +76,7 @@ class ChessPlayer:
 
     def action(self, board):
 
-        env = ChessEnv().update(board)
+        env = ChineseChessEnv().update(board)
         key = self.counter_key(env)
 
         for tl in range(self.play_config.thinking_loop):
@@ -122,12 +124,12 @@ class ChessPlayer:
     async def start_search_my_move(self, board):
         self.running_simulation_num += 1
         with await self.sem:  # reduce parallel search number
-            env = ChessEnv().update(board)
+            env = ChineseChessEnv().update(board)
             leaf_v = await self.search_my_move(env, is_root_node=True)
             self.running_simulation_num -= 1
             return leaf_v
 
-    async def search_my_move(self, env: ChessEnv, is_root_node=False):
+    async def search_my_move(self, env: ChineseChessEnv, is_root_node=False):
         """
 
         Q, V is value for this Player(always white).
@@ -152,7 +154,7 @@ class ChessPlayer:
         # is leaf?
         if key not in self.expanded:  # reach leaf node
             leaf_v = await self.expand_and_evaluate(env)
-            if env.board.turn == chess.WHITE:
+            if env.board.turn == ChineseChessEnv.WHITE:
                 return leaf_v  # Value for white
             else:
                 return -leaf_v  # Value for white == -Value for white
@@ -182,14 +184,14 @@ class ChessPlayer:
 
         update var_p, return leaf_v
 
-        :param ChessEnv env:
+        :param ChineseChessEnv env:
         :return: leaf_v
         """
         key = self.counter_key(env)
         self.now_expanding.add(key)
 
         black_ary, white_ary = env.black_and_white_plane()
-        state = [black_ary, white_ary] if env.board.turn == chess.BLACK else [white_ary, black_ary]
+        state = [black_ary, white_ary] if env.board.turn == ChineseChessEnv.BLACK else [white_ary, black_ary]
         future = await self.predict(np.array(state))  # type: Future
 
         await future
@@ -248,7 +250,7 @@ class ChessPlayer:
         :return:
         """
         pc = self.play_config
-        env = ChessEnv().update(board)
+        env = ChineseChessEnv().update(board)
         key = self.counter_key(env)
         if env.turn < pc.change_tau_turn:
             return self.var_n[key] / (np.sum(self.var_n[key])+1e-8)  # tau = 1
@@ -259,7 +261,7 @@ class ChessPlayer:
             return ret
 
     @staticmethod
-    def counter_key(env: ChessEnv):
+    def counter_key(env: ChineseChessEnv):
         """
         Return the chessboard status by FEN(custom) and game turn.
         :param env:
@@ -292,7 +294,7 @@ class ChessPlayer:
                  self.play_config.noise_eps * np.random.dirichlet([self.play_config.dirichlet_alpha] * self.labels_n)
 
         u_ = self.play_config.c_puct * p_ * xx_ / (1 + self.var_n[key])
-        if env.board.turn == chess.WHITE:
+        if env.board.turn == ChineseChessEnv.WHITE:
             v_ = (self.var_q[key] + u_ + 1000) * legal_labels
         else:
             # When enemy's selecting action, flip Q-Value.
