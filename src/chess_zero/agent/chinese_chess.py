@@ -808,6 +808,26 @@ class Board(BaseBoard):
                     BB_FILE_MASKS[square] & self.occupied])
             return attacks
 
+    def _attackers_mask(self, color, square, occupied):
+        # TODO: python-chess库中代码移植
+        rank_pieces = BB_RANK_MASKS[square] & occupied
+        file_pieces = BB_FILE_MASKS[square] & occupied
+        diag_pieces = BB_DIAG_MASKS[square] & occupied
+
+        queens_and_rooks = self.queens | self.rooks
+        queens_and_bishops = self.queens | self.bishops
+
+        attackers = (
+            (BB_KING_ATTACKS[square] & self.kings) |
+            (BB_KNIGHT_ATTACKS[square] & self.knights) |
+            (BB_RANK_ATTACKS[square][rank_pieces] & queens_and_rooks) |
+            (BB_FILE_ATTACKS[square][file_pieces] & queens_and_rooks) |
+            (BB_DIAG_ATTACKS[square][diag_pieces] & queens_and_bishops) |
+            (BB_PAWN_ATTACKS[not color][square] & self.pawns))
+
+        return attackers & self.occupied_co[color]
+
+
     def attackers_mask(self, color, square):
         return self._attackers_mask(color, square, self.occupied)
 
@@ -959,7 +979,7 @@ class Board(BaseBoard):
             return not self.is_attacked_by(not self.turn, move.to_square)
         else:
             return not blockers & BB_SQUARES[move.from_square] or BB_RAYS[move.from_square][move.to_square] & \
-                BB_SQUARES[king]
+                   BB_SQUARES[king]
 
     def generate_legal_moves(self, from_mask=BB_ALL, to_mask=BB_ALL):
         if self.is_variant_end():
@@ -1006,11 +1026,9 @@ class Board(BaseBoard):
             return True
 
         return False
-    
-    
-    def can_claim_threefold_repetition():
-        return False
 
+    def can_claim_threefold_repetition(self):
+        return False
 
     def result(self, claim_draw=False):
         """
@@ -1096,5 +1114,25 @@ class PseudoLegalMoveGenerator(object):
 
 
 class LegalMoveGenerator(object):
+
     def __init__(self, board):
         self.board = board
+
+    def __bool__(self):
+        return any(self.board.generate_legal_moves())
+
+    __nonzero__ = __bool__
+
+    def count(self):
+        # List conversion is faster than iterating.
+        return len(list(self))
+
+    def __iter__(self):
+        return self.board.generate_legal_moves()
+
+    def __contains__(self, move):
+        return self.board.is_legal(move)
+
+    def __repr__(self):
+        sans = ", ".join(self.board.san(move) for move in self)
+        return "<LegalMoveGenerator at {0} ({1})>".format(hex(id(self)), sans)
