@@ -14,7 +14,7 @@ def start(config: Config):
     chess_model = PlayWithHuman(config)
 
     env = ChineseChessEnv().reset()
-    human_is_black = True # random() < 0.5
+    human_is_black = random() < 0.5
     chess_model.start_game(human_is_black)
     env.render()
 

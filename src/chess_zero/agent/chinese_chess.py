@@ -45,26 +45,26 @@ SQUARES = [
     A9, B9, C9, D9, E9, F9, G9, H9, I9] = range(90)
 
 
-def square_file(square):
-    """Gets the file index of the square where ``0`` is the a file."""
+def square_col(square):
+    """Gets the column index of the square where ``0`` is the a column."""
     return square % 9
 
 
-def square_rank(square):
-    """Gets the rank index of the square where ``0`` is the first rank."""
+def square_row(square):
+    """Gets the row index of the square where ``0`` is the first row."""
     return square // 9
 
 
 def square_name(square):
     """Gets the name of the square, like ``a3``."""
-    return FILE_NAMES[square_file(square)] + RANK_NAMES[square_rank(square)]
+    return FILE_NAMES[square_col(square)] + RANK_NAMES[square_row(square)]
 
 
 def square_distance(a, b):
     """
     Gets the distance (i.e., the number of king steps) from square *a* to *b*.
     """
-    return max(abs(square_file(a) - square_file(b)), abs(square_rank(a) - square_rank(b)))
+    return max(abs(square_col(a) - square_col(b)), abs(square_row(a) - square_row(b)))
 
 
 def square_mirror(square):
@@ -76,7 +76,7 @@ SQUARES_180 = [square_mirror(sq) for sq in SQUARES]
 SQUARE_NAMES = [square_name(sq) for sq in SQUARES]
 
 BB_VOID = 0
-BB_ALL = 0x3ffffffffffffffffffffff
+BB_ALL = int('1' * 90, 2)   # 90 bit
 BB_SQUARES = [
     BB_A0, BB_B0, BB_C0, BB_D0, BB_E0, BB_F0, BB_G0, BB_H0, BB_I0,
     BB_A1, BB_B1, BB_C1, BB_D1, BB_E1, BB_F1, BB_G1, BB_H1, BB_I1,
@@ -109,10 +109,20 @@ def _default_limit(square):
 
 
 def _king_white_limit(square):
+    """
+    黑方田字格限制
+    :param square:
+    :return:
+    """
     return square in [3, 4, 5, 12, 13, 14, 21, 22, 23]
 
 
 def _king_black_limit(square):
+    """
+    白方田字格限制
+    :param square:
+    :return:
+    """
     return square in [66, 67, 68, 75, 76, 77, 84, 85, 86]
 
 
@@ -147,66 +157,90 @@ def _advisor_black_limit(square):
 
 
 def _sliding_attacks(square, occupied, deltas, limit=_default_limit):
+    """
+    计算棋子的攻击范围
+    :param square:
+    :param occupied:
+    :param deltas:
+    :param limit:
+    :return:
+    """
     attacks = 0
-
     for delta in deltas:
         sq = square
-
         while True:
             sq += delta
             if not limit(sq) or square_distance(sq, sq - delta) > 2:
                 break
-
             attacks |= BB_SQUARES[sq]
-
             if occupied & BB_SQUARES[sq]:
                 break
-
     return attacks
 
 
-BB_HORSE_ATTACKS = [_sliding_attacks(
-    sq, BB_ALL, [19, 17, 11, 7, -19, -17, -11, -7]) for sq in SQUARES]
-BB_KING_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_white_limit) for sq in SQUARES],
-                   [_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_black_limit) for sq in SQUARES]]
-BB_ELEPHANT_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_white_limit) for sq in SQUARES],
-                       [_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_black_limit) for sq in SQUARES]]
-BB_ADVISOR_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_white_limit) for sq in SQUARES],
-                      [_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_black_limit) for sq in SQUARES]]
-BB_PAWN_ATTACKS = [[_sliding_attacks(sq, BB_ALL, [-1, 1, 9], _pawn_white_limit) for sq in SQUARES],
-                   [_sliding_attacks(sq, BB_ALL, [-1, 1, -9], _pawn_black_limit) for sq in SQUARES]]
+BB_HORSE_ATTACKS = [
+    _sliding_attacks(
+        sq, BB_ALL, [19, 17, 11, 7, -19, -17, -11, -7]
+    ) for sq in SQUARES
+]
 
-BB_FILES = [
-    BB_FILE_A,
-    BB_FILE_B,
-    BB_FILE_C,
-    BB_FILE_D,
-    BB_FILE_E,
-    BB_FILE_F,
-    BB_FILE_G,
-    BB_FILE_H,
-    BB_FILE_I
+BB_KING_ATTACKS = [
+    [_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_white_limit) for sq in SQUARES],
+    [_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_black_limit) for sq in SQUARES]
+]
+
+BB_ELEPHANT_ATTACKS = [
+    [_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_white_limit) for sq in SQUARES],
+    [_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_black_limit) for sq in SQUARES]
+]
+
+BB_ADVISOR_ATTACKS = [
+    [_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_white_limit) for sq in SQUARES],
+    [_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_black_limit) for sq in SQUARES]
+]
+
+BB_PAWN_ATTACKS = [
+    [_sliding_attacks(sq, BB_ALL, [-1, 1, 9], _pawn_white_limit) for sq in SQUARES],
+    [_sliding_attacks(sq, BB_ALL, [-1, 1, -9], _pawn_black_limit) for sq in SQUARES]
+]
+
+BB_COL = [
+    BB_COL_A,
+    BB_COL_B,
+    BB_COL_C,
+    BB_COL_D,
+    BB_COL_E,
+    BB_COL_F,
+    BB_COL_G,
+    BB_COL_H,
+    BB_COL_I
 ] = [0x201008040201008040201 << i for i in range(9)]
-BB_RANKS = [
-    BB_RANK_0,
-    BB_RANK_1,
-    BB_RANK_2,
-    BB_RANK_3,
-    BB_RANK_4,
-    BB_RANK_5,
-    BB_RANK_6,
-    BB_RANK_7,
-    BB_RANK_8,
-    BB_RANK_9
+
+BB_ROW = [
+    BB_ROW_0,
+    BB_ROW_1,
+    BB_ROW_2,
+    BB_ROW_3,
+    BB_ROW_4,
+    BB_ROW_5,
+    BB_ROW_6,
+    BB_ROW_7,
+    BB_ROW_8,
+    BB_ROW_9
 ] = [0x1ff << (9 * i) for i in range(10)]
 
 
 def _edges(square):
-    return (((BB_RANK_0 | BB_RANK_9) & ~BB_RANKS[square_rank(square)]) |
-            ((BB_FILE_A | BB_FILE_I) & ~BB_FILES[square_file(square)]))
+    return (((BB_ROW_0 | BB_ROW_9) & ~BB_ROW[square_row(square)]) |
+            ((BB_COL_A | BB_COL_I) & ~BB_COL[square_col(square)]))
 
 
 def _carry_rippler(mask):
+    """
+    如下文的注释，返回mask的子集
+    :param mask:
+    :return:
+    """
     # Carry-Rippler trick to iterate subsets of mask.
     subset = 0
     while True:
@@ -223,7 +257,7 @@ def _attack_table(deltas):
     for square in SQUARES:
         attacks = {}
 
-        mask = _sliding_attacks(square, 0, deltas) & ~_edges(square)
+        mask = _sliding_attacks(square, BB_VOID, deltas) & ~_edges(square)
         for subset in _carry_rippler(mask):
             attacks[subset] = _sliding_attacks(square, subset, deltas)
 
@@ -363,7 +397,8 @@ class BaseBoard(object):
             self._set_board_fen(board_fen)
 
     def _reset_board(self):
-        self.pawns = BB_A3 | BB_C3 | BB_E3 | BB_G3 | BB_I3 | BB_A6 | BB_C6 | BB_E6 | BB_G6 | BB_I6
+        self.pawns = (BB_A3 | BB_C3 | BB_E3 | BB_G3 | BB_I3 | 
+                      BB_A6 | BB_C6 | BB_E6 | BB_G6 | BB_I6 )
         self.horse = BB_B0 | BB_H0 | BB_B9 | BB_H9
         self.elephant = BB_C0 | BB_G0 | BB_C9 | BB_G9
         self.rooks = BB_CORNERS
@@ -373,8 +408,8 @@ class BaseBoard(object):
 
         self.promoted = BB_VOID
 
-        self.occupied_co[WHITE] = BB_RANK_0 | BB_B2 | BB_H2 | BB_A3 | BB_C3 | BB_E3 | BB_G3 | BB_I3
-        self.occupied_co[BLACK] = BB_RANK_9 | BB_B7 | BB_H7 | BB_A6 | BB_C6 | BB_E6 | BB_G6 | BB_I6
+        self.occupied_co[WHITE] = BB_ROW_0 | BB_B2 | BB_H2 | BB_A3 | BB_C3 | BB_E3 | BB_G3 | BB_I3
+        self.occupied_co[BLACK] = BB_ROW_9 | BB_B7 | BB_H7 | BB_A6 | BB_C6 | BB_E6 | BB_G6 | BB_I6
         self.occupied = self.occupied_co[WHITE] | self.occupied_co[BLACK]
 
     def reset_board(self):
@@ -408,7 +443,7 @@ class BaseBoard(object):
             return Piece(piece_type, color)
 
     def piece_type_at(self, square):
-        """Gets the piece type at the given square."""
+        """Gets the piece type without type at the given square."""
         mask = BB_SQUARES[square]
 
         if not self.occupied & mask:
@@ -446,7 +481,7 @@ class BaseBoard(object):
                     empty = 0
                 builder.append(piece.symbol())
 
-            if BB_SQUARES[square] & BB_FILE_I:
+            if BB_SQUARES[square] & BB_COL_I:
                 if empty:
                     builder.append(str(empty))
                     empty = 0
@@ -812,21 +847,20 @@ class Board(BaseBoard):
         # TODO: python-chess库中代码移植
         rank_pieces = BB_RANK_MASKS[square] & occupied
         file_pieces = BB_FILE_MASKS[square] & occupied
-        diag_pieces = BB_DIAG_MASKS[square] & occupied
+        # diag_pieces = BB_DIAG_MASKS[square] & occupied
 
-        queens_and_rooks = self.queens | self.rooks
-        queens_and_bishops = self.queens | self.bishops
+        rooks = self.rooks
+        # queens_and_bishops = self.queens | self.bishops
 
         attackers = (
-            (BB_KING_ATTACKS[square] & self.kings) |
-            (BB_KNIGHT_ATTACKS[square] & self.knights) |
-            (BB_RANK_ATTACKS[square][rank_pieces] & queens_and_rooks) |
-            (BB_FILE_ATTACKS[square][file_pieces] & queens_and_rooks) |
-            (BB_DIAG_ATTACKS[square][diag_pieces] & queens_and_bishops) |
-            (BB_PAWN_ATTACKS[not color][square] & self.pawns))
+                (BB_KING_ATTACKS[square] & self.kings) |
+                (BB_HORSE_ATTACKS[square] & self.horse) |
+                (BB_RANK_ATTACKS[square][rank_pieces] & rooks) |
+                (BB_FILE_ATTACKS[square][file_pieces] & rooks) |
+                # TODO 炮
+                (BB_PAWN_ATTACKS[not color][square] & self.pawns))
 
         return attackers & self.occupied_co[color]
-
 
     def attackers_mask(self, color, square):
         return self._attackers_mask(color, square, self.occupied)
@@ -924,7 +958,7 @@ class Board(BaseBoard):
                        & self.occupied_co[not self.turn] & to_mask)
 
             for to_square in scan_reversed(targets):
-                if square_rank(to_square) in [0, 9]:
+                if square_row(to_square) in [0, 9]:
                     yield Move(from_square, to_square, ROOK)
                 else:
                     yield Move(from_square, to_square)
@@ -941,7 +975,7 @@ class Board(BaseBoard):
         for to_square in scan_reversed(single_moves):
             from_square = to_square + (9 if self.turn == BLACK else -9)
 
-            if square_rank(to_square) in [0, 9]:
+            if square_row(to_square) in [0, 9]:
                 yield Move(from_square, to_square, ROOK)
             else:
                 yield Move(from_square, to_square)

@@ -34,7 +34,7 @@ class SelfPlayWorker:
         """
         self.config = config
         self.model = model
-        self.env = env     # type: ChessEnv
+        self.env = env     # type: ChineseChessEnv
         self.black = None  # type: ChineseChessPlayer
         self.white = None  # type: ChineseChessPlayer
         self.buffer = []

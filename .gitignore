@@ -21,3 +21,4 @@ video/*
 logs/
 *.sh\
 .vscode/
+venv/
