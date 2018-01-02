@@ -1,5 +1,7 @@
 import os
 import chess
+import numpy as np
+
 
 def _project_dir():
     d = os.path.dirname
@@ -8,6 +10,13 @@ def _project_dir():
 
 def _data_dir():
     return os.path.join(_project_dir(), "data")
+
+
+def flipped_uci_labels():
+    def repl(x):
+        return "".join([(str(9 - int(a)) if a.isdigit() else a) for a in x])
+
+    return [repl(x) for x in create_uci_labels()]
 
 
 def create_uci_labels():
@@ -22,7 +31,8 @@ def create_uci_labels():
                            [(l1, t) for t in range(0, 8)] + \
                            [(l1 + t, n1 + t) for t in range(-7, 8)] + \
                            [(l1 + t, n1 - t) for t in range(-7, 8)] + \
-                           [(l1 + a, n1 + b) for (a, b) in [(-2, -1), (-1, -2), (-2, 1), (1, -2), (2, -1), (-1, 2), (2, 1), (1, 2)]]
+                           [(l1 + a, n1 + b) for (a, b) in
+                            [(-2, -1), (-1, -2), (-2, 1), (1, -2), (2, -1), (-1, 2), (2, 1), (1, 2)]]
             for (l2, n2) in destinations:
                 if (l1, n1) != (l2, n2) and l2 in range(0, 8) and n2 in range(0, 8):
                     move = letters[l1] + numbers[n1] + letters[l2] + numbers[n2]
@@ -42,12 +52,18 @@ def create_uci_labels():
                 labels_array.append(l + '7' + l_r + '8' + p)
     return labels_array
 
+def flipped_ucci_labels():
+    def repl(x):
+        return "".join([(str(9 - int(a)) if a.isdigit() else a) for a in x])
+
+    return [repl(x) for x in create_ucci_labels()]
+
 
 def create_ucci_labels():
     labels_array = []
     letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
     numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-    
+
     for l1 in range(9):
         for n1 in range(10):
             # 一些通用行走规则 车 马 王 兵/卒 将
@@ -100,6 +116,11 @@ def create_ucci_labels():
 
 
 class Config:
+    unflipped_index = None
+    labels = create_ucci_labels()
+    n_labels = int(len(labels))
+    flipped_labels = flipped_ucci_labels()
+
     def __init__(self, config_type="mini"):
         self.opts = Options()
         self.resource = ResourceConfig()
@@ -119,6 +140,13 @@ class Config:
         self.eval = c.EvaluateConfig()
         self.labels = create_ucci_labels()
         self.n_labels = len(self.labels)
+
+    @staticmethod
+    def flip_policy(pol):
+        return np.asarray([pol[ind] for ind in Config.unflipped_index])
+
+
+Config.unflipped_index = [Config.labels.index(x) for x in Config.flipped_labels]
 
 
 class Options:

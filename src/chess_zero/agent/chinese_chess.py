@@ -3,6 +3,10 @@
 # so that it can operate chinese chess
 #
 
+import logging
+logger = logging.getLogger(__name__)
+logger.level = logging.DEBUG
+
 COLORS = [WHITE, BLACK] = [True, False]
 COLOR_NAMES = ["black", "white"]
 
@@ -76,7 +80,7 @@ SQUARES_180 = [square_mirror(sq) for sq in SQUARES]
 SQUARE_NAMES = [square_name(sq) for sq in SQUARES]
 
 BB_VOID = 0
-BB_ALL = int('1' * 90, 2)   # 90 bit
+BB_ALL = int('1' * 90, 2)  # 90 bit
 BB_SQUARES = [
     BB_A0, BB_B0, BB_C0, BB_D0, BB_E0, BB_F0, BB_G0, BB_H0, BB_I0,
     BB_A1, BB_B1, BB_C1, BB_D1, BB_E1, BB_F1, BB_G1, BB_H1, BB_I1,
@@ -180,28 +184,35 @@ def _sliding_attacks(square, occupied, deltas, limit=_default_limit):
 
 BB_HORSE_ATTACKS = [
     _sliding_attacks(
-        sq, BB_ALL, [19, 17, 11, 7, -19, -17, -11, -7]
-    ) for sq in SQUARES
+        sq, BB_ALL, [19, 17, 11, 7, -19, -17, -11, -7])
+    for sq in SQUARES
 ]
 
 BB_KING_ATTACKS = [
-    [_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_white_limit) for sq in SQUARES],
-    [_sliding_attacks(sq, BB_ALL, [9, 1, -9, -1], _king_black_limit) for sq in SQUARES]
+    _sliding_attacks(
+        sq, BB_ALL, [9, 1, -9, -1],
+        lambda x: _king_white_limit(x) or _king_black_limit(x)) for sq in SQUARES
 ]
 
 BB_ELEPHANT_ATTACKS = [
-    [_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_white_limit) for sq in SQUARES],
-    [_sliding_attacks(sq, BB_ALL, [20, 16, -20, -16], _elephant_black_limit) for sq in SQUARES]
+    _sliding_attacks(
+        sq, BB_ALL, [20, 16, -20, -16],
+        lambda x: _elephant_white_limit(x) or _elephant_black_limit(x)) for sq in SQUARES
 ]
 
 BB_ADVISOR_ATTACKS = [
-    [_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_white_limit) for sq in SQUARES],
-    [_sliding_attacks(sq, BB_ALL, [10, 8, -10, -8], _advisor_black_limit) for sq in SQUARES]
+    _sliding_attacks(
+        sq, BB_ALL, [10, 8, -10, -8],
+        lambda x: _advisor_white_limit(x) or _advisor_black_limit(x)) for sq in SQUARES
 ]
 
 BB_PAWN_ATTACKS = [
-    [_sliding_attacks(sq, BB_ALL, [-1, 1, 9], _pawn_white_limit) for sq in SQUARES],
-    [_sliding_attacks(sq, BB_ALL, [-1, 1, -9], _pawn_black_limit) for sq in SQUARES]
+    [_sliding_attacks(
+        sq, BB_ALL, [-1, 1, 9],
+       _pawn_white_limit) for sq in SQUARES],
+    [_sliding_attacks(
+        sq, BB_ALL, [-1, 1, 9],
+       _pawn_black_limit) for sq in SQUARES]
 ]
 
 BB_COL = [
@@ -362,6 +373,9 @@ class Move(object):
             raise ValueError(
                 "expected uci string to be of length 4 or 5: {0}".format(repr(ucci)))
 
+    def ucci(self):
+        return square_name(self.from_square) + square_name(self.to_square)
+
     @classmethod
     def null(cls):
         """
@@ -374,6 +388,12 @@ class Move(object):
         False
         """
         return cls(0, 0)
+
+    def __str__(self):
+        if self.from_square == 0 and self.to_square == 0:
+            return 'NULL'
+        else:
+            return (f'{square_name(self.from_square)} -> {square_name(self.to_square)}').upper()
 
 
 class BaseBoard(object):
@@ -397,14 +417,14 @@ class BaseBoard(object):
             self._set_board_fen(board_fen)
 
     def _reset_board(self):
-        self.pawns = (BB_A3 | BB_C3 | BB_E3 | BB_G3 | BB_I3 | 
-                      BB_A6 | BB_C6 | BB_E6 | BB_G6 | BB_I6 )
-        self.horse = BB_B0 | BB_H0 | BB_B9 | BB_H9
-        self.elephant = BB_C0 | BB_G0 | BB_C9 | BB_G9
+        self.pawns = (BB_A3 | BB_C3 | BB_E3 | BB_G3 | BB_I3 |
+                      BB_A6 | BB_C6 | BB_E6 | BB_G6 | BB_I6)
+        self.horses = BB_B0 | BB_H0 | BB_B9 | BB_H9
+        self.elephants = BB_C0 | BB_G0 | BB_C9 | BB_G9
         self.rooks = BB_CORNERS
-        self.advisor = BB_D0 | BB_F0 | BB_D9 | BB_F9
+        self.advisers = BB_D0 | BB_F0 | BB_D9 | BB_F9
         self.kings = BB_E0 | BB_E9
-        self.cannon = BB_B2 | BB_H2 | BB_B7 | BB_H7
+        self.cannons = BB_B2 | BB_H2 | BB_B7 | BB_H7
 
         self.promoted = BB_VOID
 
@@ -417,12 +437,12 @@ class BaseBoard(object):
 
     def _clear_board(self):
         self.pawns = BB_VOID
-        self.horse = BB_VOID
-        self.elephant = BB_VOID
+        self.horses = BB_VOID
+        self.elephants = BB_VOID
         self.rooks = BB_VOID
-        self.advisor = BB_VOID
+        self.advisers = BB_VOID
         self.kings = BB_VOID
-        self.cannon = BB_VOID
+        self.cannons = BB_VOID
 
         self.promoted = BB_VOID
 
@@ -450,17 +470,17 @@ class BaseBoard(object):
             return None
         elif self.pawns & mask:
             return PAWN
-        elif self.horse & mask:
+        elif self.horses & mask:
             return HORSE
-        elif self.elephant & mask:
+        elif self.elephants & mask:
             return ELEPHANT
         elif self.rooks & mask:
             return ROOK
-        elif self.advisor & mask:
+        elif self.advisers & mask:
             return ADVISOR
         elif self.kings & mask:
             return KING
-        elif self.cannon & mask:
+        elif self.cannons & mask:
             return CANNON
 
     def board_fen(self, promoted=False):
@@ -498,17 +518,17 @@ class BaseBoard(object):
         if piece_type == PAWN:
             self.pawns ^= mask
         elif piece_type == HORSE:
-            self.horse ^= mask
+            self.horses ^= mask
         elif piece_type == ELEPHANT:
-            self.elephant ^= mask
+            self.elephants ^= mask
         elif piece_type == ROOK:
             self.rooks ^= mask
         elif piece_type == ADVISOR:
-            self.advisor ^= mask
+            self.advisers ^= mask
         elif piece_type == KING:
             self.kings ^= mask
         elif piece_type == CANNON:
-            self.cannon ^= mask
+            self.cannons ^= mask
         else:
             return
 
@@ -528,17 +548,17 @@ class BaseBoard(object):
         if piece_type == PAWN:
             self.pawns |= mask
         elif piece_type == HORSE:
-            self.horse |= mask
+            self.horses |= mask
         elif piece_type == ELEPHANT:
-            self.elephant |= mask
+            self.elephants |= mask
         elif piece_type == ROOK:
             self.rooks |= mask
         elif piece_type == ADVISOR:
-            self.advisor |= mask
+            self.advisers |= mask
         elif piece_type == KING:
             self.kings |= mask
         elif piece_type == CANNON:
-            self.cannon |= mask
+            self.cannons |= mask
 
         self.occupied ^= mask
         self.occupied_co[color] ^= mask
@@ -793,7 +813,7 @@ class Board(BaseBoard):
             return move
 
         if not self.is_legal(move):
-            raise ValueError("illegal uci: {0} in {1}".format(
+            raise ValueError("illegal ucci: {0} in {1}".format(
                 repr(ucci), self.fen()))
 
         return move
@@ -812,30 +832,31 @@ class Board(BaseBoard):
         return move
 
     def attacks_mask(self, square):
+        """
+            根据棋子的类型，计算可能的攻击方法。
+
+            :param square: 起始计算的棋子位置，数字编号（0-89）
+        """
         bb_square = BB_SQUARES[square]
+
+        if bb_square & self.cannons:
+            #TODO: 补全炮的路径枚举
+            logger.debug('Found cannon')
+            return 0
 
         if bb_square & self.pawns:
             if bb_square & self.occupied_co[WHITE]:
                 return BB_PAWN_ATTACKS[WHITE][square]
             else:
                 return BB_PAWN_ATTACKS[BLACK][square]
-        elif bb_square & self.horse:
+        elif bb_square & self.horses:
             return BB_HORSE_ATTACKS[square]
         elif bb_square & self.kings:
-            if bb_square & self.occupied_co[WHITE]:
-                return BB_KING_ATTACKS[WHITE][square]
-            else:
-                return BB_KING_ATTACKS[BLACK][square]
-        elif bb_square & self.elephant:
-            if bb_square & self.occupied_co[WHITE]:
-                return BB_ELEPHANT_ATTACKS[WHITE][square]
-            else:
-                return BB_ELEPHANT_ATTACKS[BLACK][square]
-        elif bb_square & self.advisor:
-            if bb_square & self.occupied_co[WHITE]:
-                return BB_ADVISOR_ATTACKS[WHITE][square]
-            else:
-                return BB_ADVISOR_ATTACKS[BLACK][square]
+            return BB_KING_ATTACKS[square]
+        elif bb_square & self.elephants:
+            return BB_ELEPHANT_ATTACKS[square]
+        elif bb_square & self.advisers:
+            return BB_ADVISOR_ATTACKS[square]
         else:
             attacks = 0
             if bb_square & self.rooks:
@@ -844,7 +865,6 @@ class Board(BaseBoard):
             return attacks
 
     def _attackers_mask(self, color, square, occupied):
-        # TODO: python-chess库中代码移植
         rank_pieces = BB_RANK_MASKS[square] & occupied
         file_pieces = BB_FILE_MASKS[square] & occupied
         # diag_pieces = BB_DIAG_MASKS[square] & occupied
@@ -854,15 +874,21 @@ class Board(BaseBoard):
 
         attackers = (
                 (BB_KING_ATTACKS[square] & self.kings) |
-                (BB_HORSE_ATTACKS[square] & self.horse) |
+                (BB_HORSE_ATTACKS[square] & self.horses) |
                 (BB_RANK_ATTACKS[square][rank_pieces] & rooks) |
-                (BB_FILE_ATTACKS[square][file_pieces] & rooks) |
+                (BB_FILE_ATTACKS[square][file_pieces] & rooks) |  # 数组越界，问题待查
                 # TODO 炮
                 (BB_PAWN_ATTACKS[not color][square] & self.pawns))
 
         return attackers & self.occupied_co[color]
 
     def attackers_mask(self, color, square):
+        """
+        指定棋子是否被color方攻击？
+        :param color:
+        :param square:
+        :return:
+        """
         return self._attackers_mask(color, square, self.occupied)
 
     def is_pseudo_legal(self, move):
@@ -937,13 +963,22 @@ class Board(BaseBoard):
         return False
 
     def generate_pseudo_legal_moves(self, from_mask=BB_ALL, to_mask=BB_ALL):
+        """
+        生成当前局面下，所有种类棋子可行的移动路径。
+
+            :param self: 
+            :param from_mask=BB_ALL: 
+            :param to_mask=BB_ALL: 
+        """
         our_pieces = self.occupied_co[self.turn]
 
         # Generate piece moves.
         non_pawns = our_pieces & ~self.pawns & from_mask
         for from_square in scan_reversed(non_pawns):
+            # logger.debug(f'from square: {square_name(from_square)}')
             moves = self.attacks_mask(from_square) & ~our_pieces & to_mask
             for to_square in scan_reversed(moves):
+                # logger.debug(f'to square: {square_name(to_square)}')
                 yield Move(from_square, to_square)
 
         # The remaining moves are all pawn moves.
@@ -1016,6 +1051,13 @@ class Board(BaseBoard):
                    BB_SQUARES[king]
 
     def generate_legal_moves(self, from_mask=BB_ALL, to_mask=BB_ALL):
+        """
+        生成当前的可行走法, 具体的先检查“将”或“帅”的位置，检查是否被将军，然后分别处理。
+        现在generate_pseudo_legal_moves用法还不清楚。
+        :param from_mask:
+        :param to_mask:
+        :return:
+        """
         if self.is_variant_end():
             return
 
@@ -1024,16 +1066,21 @@ class Board(BaseBoard):
             king = msb(king_mask)
             blockers = False  # self._slider_blockers(king)
             checkers = self.attackers_mask(not self.turn, king)
-            if checkers:
+            if checkers:    
+                # 当前被将军
                 for move in self._generate_evasions(king, checkers, from_mask, to_mask):
                     if self._is_safe(king, blockers, move):
+                        logger.debug(f'Move: {move}')
                         yield move
-            else:
+            else:           
+                # 当前未被将军
                 for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
                     if self._is_safe(king, blockers, move):
+                        logger.debug(f'Move: {move}')
                         yield move
         else:
             for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
+                logger.debug(f'Move: {move}')
                 yield move
 
     def is_game_over(self, claim_draw=False):
@@ -1143,8 +1190,37 @@ class Board(BaseBoard):
 
 
 class PseudoLegalMoveGenerator(object):
+
     def __init__(self, board):
         self.board = board
+
+    def __bool__(self):
+        return any(self.board.generate_pseudo_legal_moves())
+
+    __nonzero__ = __bool__
+
+    def count(self):
+        # List conversion is faster than iterating.
+        return len(list(self))
+
+    def __iter__(self):
+        return self.board.generate_pseudo_legal_moves()
+
+    def __contains__(self, move):
+        return self.board.is_pseudo_legal(move)
+
+    def __repr__(self):
+        builder = []
+
+        for move in self:
+            if self.board.is_legal(move):
+                builder.append(self.board.san(move))
+            else:
+                builder.append(self.board.uci(move))
+
+        sans = ", ".join(builder)
+
+        return "<PseudoLegalMoveGenerator at {0} ({1})>".format(hex(id(self)), sans)
 
 
 class LegalMoveGenerator(object):

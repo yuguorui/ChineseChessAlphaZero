@@ -9,6 +9,7 @@ from chess_zero.config import ResourceConfig
 logger = getLogger(__name__)
 
 
+
 def find_pgn_files(directory, pattern='*.pgn'):
     files = []
     for root, dirnames, filenames in os.walk(directory):
