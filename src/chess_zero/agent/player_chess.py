@@ -1,8 +1,7 @@
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from logging import getLogger
+from logging import getLogger, DEBUG, StreamHandler, Formatter
 from threading import Lock
-
 
 import numpy as np
 
@@ -12,6 +11,13 @@ from chess_zero.env.chess_env import ChineseChessEnv
 from chess_zero.agent import chinese_chess
 
 logger = getLogger(__name__)
+logger.setLevel(DEBUG)
+# create console handler and set level to debug
+ch = StreamHandler()
+ch.setLevel(DEBUG)
+formatter = Formatter('%(asctime)s - %(thread)d - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 # these are from AGZ nature paper
@@ -37,14 +43,17 @@ class ChineseChessPlayer:
         self.play_config = play_config or self.config.play
         self.labels_n = config.n_labels
         self.labels = config.labels
-        self.move_lookup = {chinese_chess.Move.from_ucci(move): i for move, i in zip(self.labels, range(self.labels_n))}
+        self.move_lookup = {
+            chinese_chess.Move.from_ucci(move): i
+            for move, i in zip(self.labels, range(self.labels_n))
+        }
         if dummy:
             return
 
         self.pipe_pool = pipes
         self.node_lock = defaultdict(Lock)
 
-    def reset(self):
+    def reset_mcts(self):
         self.tree = defaultdict(VisitStats)
 
     def deboog(self, env):
@@ -67,7 +76,7 @@ class ChineseChessPlayer:
                   f'p: {s[3]:7.5f}')
 
     def action(self, env, can_stop=True) -> str:
-        self.reset()
+        self.reset_mcts()
 
         # for tl in range(self.play_config.thinking_loop):
         root_value, naked_value = self.search_moves(env)
@@ -85,14 +94,14 @@ class ChineseChessPlayer:
 
     def search_moves(self, env) -> (float, float):
         futures = []
-        # with ThreadPoolExecutor(max_workers=self.play_config.search_threads) as executor:
-        #     for _ in range(self.play_config.simulation_num_per_move):
-        #         futures.append(executor.submit(self.search_my_move, env=env.copy(), is_root_node=True))
-        #
-        # vals = [f.result() for f in futures]
+        with ThreadPoolExecutor(max_workers=self.play_config.search_threads) as executor:
+            for _ in range(self.play_config.simulation_num_per_move):
+                futures.append(executor.submit(self.search_my_move, env=env.copy(), is_root_node=True))
 
-        v = self.search_my_move(env.copy(), True)
-        vals = [v]
+        vals = [f.result() for f in futures]
+
+        # v = self.search_my_move(env.copy(), True)
+        # vals = [v]
         return np.max(vals), vals[0]  # vals[0] is kind of racy
 
     def search_my_move(self, env: ChineseChessEnv, is_root_node=False) -> float:
@@ -175,6 +184,8 @@ class ChineseChessPlayer:
         if my_visitstats.p is not None:  # push p to edges
             tot_p = 1e-8
             for mov in env.board.legal_moves:
+                logger.debug(f'Move: {mov}')
+                # print(f'Move: {mov}')
                 mov_p = my_visitstats.p[self.move_lookup[mov]]
                 my_visitstats.a[mov].p = mov_p
                 tot_p += mov_p

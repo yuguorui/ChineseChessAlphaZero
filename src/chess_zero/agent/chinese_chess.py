@@ -4,6 +4,7 @@
 #
 
 import logging
+
 logger = logging.getLogger(__name__)
 logger.level = logging.DEBUG
 
@@ -209,10 +210,10 @@ BB_ADVISOR_ATTACKS = [
 BB_PAWN_ATTACKS = [
     [_sliding_attacks(
         sq, BB_ALL, [-1, 1, 9],
-       _pawn_white_limit) for sq in SQUARES],
+        _pawn_white_limit) for sq in SQUARES],
     [_sliding_attacks(
         sq, BB_ALL, [-1, 1, 9],
-       _pawn_black_limit) for sq in SQUARES]
+        _pawn_black_limit) for sq in SQUARES]
 ]
 
 BB_COL = [
@@ -394,6 +395,39 @@ class Move(object):
             return 'NULL'
         else:
             return (f'{square_name(self.from_square)} -> {square_name(self.to_square)}').upper()
+
+    def __eq__(self, other):
+        ne = self.__ne__(other)
+        return NotImplemented if ne is NotImplemented else not ne
+
+    def __ne__(self, other):
+        try:
+            if self.from_square != other.from_square:
+                return True
+            elif self.to_square != other.to_square:
+                return True
+            elif self.promotion != other.promotion:
+                return True
+            elif self.drop != other.drop:
+                return True
+            else:
+                return False
+        except AttributeError:
+            return NotImplemented
+
+    def __hash__(self):
+        return hash((self.to_square, self.from_square, self.promotion, self.drop))
+
+    def __copy__(self):
+        return type(self)(self.from_square, self.to_square, self.promotion, self.drop)
+
+    def __deepcopy__(self, memo):
+        move = self.__copy__()
+        memo[id(self)] = move
+        return move
+
+    def __bool__(self):
+        return bool(self.from_square or self.to_square or self.promotion or self.drop)
 
 
 class BaseBoard(object):
@@ -818,7 +852,7 @@ class Board(BaseBoard):
 
         return move
 
-    def push_uci(self, ucci):
+    def push_ucci(self, ucci):
         """
         Parses a move in UCCI notation and puts it on the move stack.
 
@@ -840,7 +874,7 @@ class Board(BaseBoard):
         bb_square = BB_SQUARES[square]
 
         if bb_square & self.cannons:
-            #TODO: 补全炮的路径枚举
+            # TODO: 补全炮的路径枚举
             logger.debug('Found cannon')
             return 0
 
@@ -1066,13 +1100,13 @@ class Board(BaseBoard):
             king = msb(king_mask)
             blockers = False  # self._slider_blockers(king)
             checkers = self.attackers_mask(not self.turn, king)
-            if checkers:    
+            if checkers:
                 # 当前被将军
                 for move in self._generate_evasions(king, checkers, from_mask, to_mask):
                     if self._is_safe(king, blockers, move):
                         logger.debug(f'Move: {move}')
                         yield move
-            else:           
+            else:
                 # 当前未被将军
                 for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
                     if self._is_safe(king, blockers, move):

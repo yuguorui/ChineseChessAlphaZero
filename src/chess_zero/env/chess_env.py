@@ -154,7 +154,7 @@ class ChineseChessEnv:
             self._resign()
             return
 
-        self.board.push_uci(action)
+        self.board.push_ucci(action)
 
         self.num_halfmoves += 1
 
