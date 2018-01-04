@@ -394,7 +394,7 @@ class Move(object):
         if self.from_square == 0 and self.to_square == 0:
             return 'NULL'
         else:
-            return (f'{square_name(self.from_square)} -> {square_name(self.to_square)}').upper()
+            return f'{square_name(self.from_square)} -> {square_name(self.to_square)}'.upper()
 
     def __eq__(self, other):
         ne = self.__ne__(other)
@@ -517,7 +517,7 @@ class BaseBoard(object):
         elif self.cannons & mask:
             return CANNON
 
-    def board_fen(self, promoted=False):
+    def board_fen(self):
         """
         Gets the board FEN.
         """
@@ -781,7 +781,7 @@ class Board(BaseBoard):
         """
         epd = []
 
-        epd.append(self.board_fen(promoted=promoted))
+        epd.append(self.board_fen())
         epd.append("w" if self.turn == WHITE else "b")
         epd.append("-")
         epd.append("-")
@@ -910,7 +910,7 @@ class Board(BaseBoard):
                 (BB_KING_ATTACKS[square] & self.kings) |
                 (BB_HORSE_ATTACKS[square] & self.horses) |
                 (BB_RANK_ATTACKS[square][rank_pieces] & rooks) |
-                (BB_FILE_ATTACKS[square][file_pieces] & rooks) |  # 数组越界，问题待查
+                (BB_FILE_ATTACKS[square][file_pieces] & rooks) |
                 # TODO 炮
                 (BB_PAWN_ATTACKS[not color][square] & self.pawns))
 
@@ -1000,9 +1000,6 @@ class Board(BaseBoard):
         """
         生成当前局面下，所有种类棋子可行的移动路径。
 
-            :param self: 
-            :param from_mask=BB_ALL: 
-            :param to_mask=BB_ALL: 
         """
         our_pieces = self.occupied_co[self.turn]
 
@@ -1212,8 +1209,7 @@ class Board(BaseBoard):
         :return:
         """
 
-        builder = []
-        builder.append(f"{''.join([' '] + FILE_NAMES)}\n")
+        builder = [f"{''.join([' '] + FILE_NAMES)}\n"]
         fen = self.fen()
         fen = fen[:fen.find(' ')].split('/')
         for i, row in enumerate(fen):
@@ -1221,6 +1217,152 @@ class Board(BaseBoard):
             builder.append(f"{''.join([RANK_NAMES[i]] + r)}\n")
 
         return "".join(builder)
+
+    def is_capture(self, move):
+        """Checks if the given pseudo-legal move is a capture."""
+        return bool(BB_SQUARES[move.to_square] & self.occupied_co[not self.turn])
+
+    def is_zeroing(self, move):
+        """Checks if the given pseudo-legal move is a capture or pawn move."""
+        return bool(
+            BB_SQUARES[move.from_square] & self.pawns or BB_SQUARES[move.to_square] & self.occupied_co[not self.turn])
+
+    def push(self, move):
+        """
+        Updates the position with the given move and puts it onto the
+        move stack.
+
+        >>> import chess
+        >>>
+        >>> board = chess.Board()
+        >>>
+        >>> Nf3 = chess.Move.from_uci("g1f3")
+        >>> board.push(Nf3)  # Make the move
+
+        >>> board.pop()  # Unmake the last move
+        Move.from_uci('g1f3')
+
+        Null moves just increment the move counters, switch turns and forfeit
+        en passant capturing.
+
+        :warning: Moves are not checked for legality.
+        """
+        # Remember game state.
+        self.stack.append(_BoardState(self))
+        self.move_stack.append(move)
+
+        # move = self._to_chess960(move)
+
+        # Reset en passant square.
+        # ep_square = self.ep_square
+        # self.ep_square = None
+
+        # Increment move counters.
+        self.halfmove_clock += 1
+        if self.turn == BLACK:
+            self.fullmove_number += 1
+
+        # On a null move, simply swap turns and reset the en passant square.
+        if not move:
+            self.turn = not self.turn
+            return
+
+        # Drops.
+        if move.drop:
+            self._set_piece_at(move.to_square, move.drop, self.turn)
+            self.turn = not self.turn
+            return
+
+        # Zero the half-move clock.
+        if self.is_zeroing(move):
+            self.halfmove_clock = 0
+
+        from_bb = BB_SQUARES[move.from_square]
+        # to_bb = BB_SQUARES[move.to_square]
+
+        # promoted = self.promoted & from_bb
+        piece_type = self._remove_piece_at(move.from_square)
+        capture_square = move.to_square
+        captured_piece_type = self.piece_type_at(capture_square)
+
+        # Update castling rights.
+        # self.castling_rights = self.clean_castling_rights() & ~to_bb & ~from_bb
+        # if piece_type == KING and not promoted:
+        #     if self.turn == WHITE:
+        #         self.castling_rights &= ~BB_RANK_1
+        #     else:
+        #         self.castling_rights &= ~BB_RANK_8
+        # elif captured_piece_type == KING and not self.promoted & to_bb:
+        #     if self.turn == WHITE and square_rank(move.to_square) == 7:
+        #         self.castling_rights &= ~BB_RANK_8
+        #     elif self.turn == BLACK and square_rank(move.to_square) == 0:
+        #         self.castling_rights &= ~BB_RANK_1
+
+        # Handle special pawn moves.
+        if piece_type == PAWN:
+            diff = move.to_square - move.from_square
+
+            if diff == 16 and square_row(move.from_square) == 1:
+                self.ep_square = move.from_square + 8
+            elif diff == -16 and square_row(move.from_square) == 6:
+                self.ep_square = move.from_square - 8
+            # elif move.to_square == ep_square and abs(diff) in [7, 9] and not captured_piece_type:
+            #     # Remove pawns captured en passant.
+            #     down = -8 if self.turn == WHITE else 8
+            #     capture_square = ep_square + down
+            #     captured_piece_type = self._remove_piece_at(capture_square)
+
+        # Promotion.
+        # if move.promotion:
+        #     promoted = True
+        #     piece_type = move.promotion
+
+        # Castling.
+        # castling = piece_type == KING and self.occupied_co[self.turn] & to_bb
+        # if castling:
+        #     a_side = square_file(move.to_square) < square_file(move.from_square)
+        #
+        #     self._remove_piece_at(move.from_square)
+        #     self._remove_piece_at(move.to_square)
+        #
+        #     if a_side:
+        #         self._set_piece_at(C1 if self.turn == WHITE else C8, KING, self.turn)
+        #         self._set_piece_at(D1 if self.turn == WHITE else D8, ROOK, self.turn)
+        #     else:
+        #         self._set_piece_at(G1 if self.turn == WHITE else G8, KING, self.turn)
+        #         self._set_piece_at(F1 if self.turn == WHITE else F8, ROOK, self.turn)
+
+        # Put the piece on the target square.
+        # if not castling and piece_type:
+        if piece_type:
+            # was_promoted = self.promoted & to_bb
+            self._set_piece_at(move.to_square, piece_type, self.turn)
+
+            # if captured_piece_type:
+            #     self._push_capture(move, capture_square, captured_piece_type, was_promoted)
+
+        # Swap turn.
+        self.turn = not self.turn
+
+
+class _BoardState(object):
+
+    def __init__(self, board: Board):
+        self.pawns = board.pawns
+        self.horses = board.horses
+        self.elephants = board.elephants
+        self.rooks = board.rooks
+        self.advisers = board.advisers
+        self.kings = board.kings
+        self.cannons = board.cannons
+
+        self.occupied_w = board.occupied_co[WHITE]
+        self.occupied_b = board.occupied_co[BLACK]
+        self.occupied = board.occupied
+
+        self.turn = board.turn
+        self.halfmove_clock = board.halfmove_clock
+        self.fullmove_number = board.fullmove_number
 
 
 class PseudoLegalMoveGenerator(object):

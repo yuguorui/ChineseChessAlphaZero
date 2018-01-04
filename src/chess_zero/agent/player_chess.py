@@ -25,6 +25,7 @@ class VisitStats:
     def __init__(self):
         self.a = defaultdict(ActionStats)
         self.sum_n = 0
+        self.p = None
 
 
 class ActionStats:
@@ -176,15 +177,21 @@ class ChineseChessPlayer:
 
     # @profile
     def select_action_q_and_u(self, env, is_root_node) -> chinese_chess.Move:
+
         # this method is called with state locked
         state = state_key(env)
 
         my_visitstats = self.tree[state]
 
+        if not hasattr(my_visitstats, 'p'):
+            pass
+
+        moves_count = 0
         if my_visitstats.p is not None:  # push p to edges
             tot_p = 1e-8
             for mov in env.board.legal_moves:
                 logger.debug(f'Move: {mov}')
+                moves_count += 1
                 # print(f'Move: {mov}')
                 mov_p = my_visitstats.p[self.move_lookup[mov]]
                 my_visitstats.a[mov].p = mov_p
@@ -193,6 +200,7 @@ class ChineseChessPlayer:
                 a_s.p /= tot_p
             my_visitstats.p = None
 
+        # U(s,a)分式中的分子部分
         xx_ = np.sqrt(my_visitstats.sum_n + 1)  # sqrt of sum(N(s, b); for all b)
 
         e = self.play_config.noise_eps
@@ -200,8 +208,10 @@ class ChineseChessPlayer:
         dir_alpha = self.play_config.dirichlet_alpha
 
         best_s = -999
-        best_a = None
+        best_action = None
 
+        # argmax(Q(s_t, a) + U(s_t, a))
+        # 对每个动作计算a_t，选取收益最高的action
         for action, a_s in my_visitstats.a.items():
             p_ = a_s.p
             if is_root_node:
@@ -209,9 +219,9 @@ class ChineseChessPlayer:
             b = a_s.q + c_puct * p_ * xx_ / (1 + a_s.n)
             if b > best_s:
                 best_s = b
-                best_a = action
-
-        return best_a
+                best_action = action
+        assert best_action is not None
+        return best_action
 
     def apply_temperature(self, policy, turn):
         tau = np.power(self.play_config.tau_decay_rate, turn + 1)
