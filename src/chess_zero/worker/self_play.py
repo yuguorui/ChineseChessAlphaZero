@@ -2,7 +2,7 @@ import os
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
-from logging import getLogger
+from logging import getLogger, DEBUG, StreamHandler, Formatter
 from multiprocessing import Manager
 from threading import Thread
 from time import time
@@ -16,7 +16,12 @@ from chess_zero.lib.model_helper import load_best_model_weight, save_as_best_mod
     reload_best_model_weight_if_changed
 
 logger = getLogger(__name__)
-
+logger.setLevel(DEBUG)
+ch = StreamHandler()
+ch.setLevel(DEBUG)
+formatter = Formatter('%(asctime)s - %(thread)d - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 def start(config: Config):
     return SelfPlayWorker(config).start()
@@ -98,6 +103,10 @@ def self_play_buffer(config, cur) -> (ChineseChessPlayer, list):
         else:
             action = black.action(env)
         env.step(action)
+        print(f'Move: {action}')
+        print(f'{env.board}')
+        print(f'{env.board.fen()}')
+        print('=====================================')
         if env.num_halfmoves >= config.play.max_game_length:
             env.adjudicate()
 

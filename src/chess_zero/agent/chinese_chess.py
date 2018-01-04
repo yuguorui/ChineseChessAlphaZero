@@ -2,7 +2,7 @@
 # This is a model simplify and modify the python-chess api
 # so that it can operate chinese chess
 #
-
+import copy
 import logging
 
 logger = logging.getLogger(__name__)
@@ -209,11 +209,11 @@ BB_ADVISOR_ATTACKS = [
 
 BB_PAWN_ATTACKS = [
     [_sliding_attacks(
-        sq, BB_ALL, [-1, 1, 9],
-        _pawn_white_limit) for sq in SQUARES],
+        sq, BB_ALL, [-1, 1, -9],
+        _pawn_black_limit) for sq in SQUARES],
     [_sliding_attacks(
         sq, BB_ALL, [-1, 1, 9],
-        _pawn_black_limit) for sq in SQUARES]
+        _pawn_white_limit) for sq in SQUARES]
 ]
 
 BB_COL = [
@@ -361,6 +361,7 @@ class Piece(object):
                 return False
         except AttributeError:
             return NotImplemented
+
 
 class Move(object):
     """
@@ -726,6 +727,8 @@ class Board(BaseBoard):
     starting_fen = STARTING_FEN
 
     def __init__(self, fen=STARTING_FEN, chess960=False):
+
+        # noinspection PyTypeChecker
         BaseBoard.__init__(self, None)
 
         self.chess960 = chess960
@@ -736,16 +739,27 @@ class Board(BaseBoard):
         self.move_stack = []
         self.stack = []
 
-        self.turn = WHITE
-        self.halfmove_clock = 0
-        self.fullmove_number = 1
-
         if fen is None:
             self.clear()
         elif fen == type(self).starting_fen:
             self.reset()
         else:
             self.set_fen(fen)
+
+    def copy(self, stack=True):
+        board = super(Board, self).copy()
+
+        board.chess960 = self.chess960
+
+        board.turn = self.turn
+        board.fullmove_number = self.fullmove_number
+        board.halfmove_clock = self.halfmove_clock
+
+        if stack:
+            board.move_stack = copy.deepcopy(self.move_stack)
+            board.stack = copy.copy(self.stack)
+
+        return board
 
     def reset(self):
         """Restores the starting position."""
@@ -1267,8 +1281,10 @@ class Board(BaseBoard):
 
     def is_zeroing(self, move):
         """Checks if the given pseudo-legal move is a capture or pawn move."""
-        return bool(
-            BB_SQUARES[move.from_square] & self.pawns or BB_SQUARES[move.to_square] & self.occupied_co[not self.turn])
+        # return bool(
+        #     BB_SQUARES[move.from_square] & self.pawns or BB_SQUARES[move.to_square] & self.occupied_co[not self.turn])
+        return bool(BB_SQUARES[move.to_square] & self.occupied_co[not self.turn])
+
 
     def push(self, move):
         """
