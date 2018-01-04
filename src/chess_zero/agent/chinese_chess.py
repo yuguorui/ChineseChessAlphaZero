@@ -1199,8 +1199,8 @@ class Board(BaseBoard):
             return "0-1" if self.turn == WHITE else "1-0"
 
         # Draw claimed.
-        if claim_draw:  # and self.can_claim_draw():
-            return "1/2-1/2"
+        # if claim_draw:  # and self.can_claim_draw():
+        #     return "1/2-1/2"
 
         # Seventyfive-move rule or fivefold repetition.
         if self.is_seventyfive_moves():  # or self.is_fivefold_repetition():
