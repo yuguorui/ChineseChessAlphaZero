@@ -1,11 +1,5 @@
 from pwintools import  *
 
-def beatEleeye(in_fen):
-    p = process('../eleeye/eleeye/ELEEYE.EXE') 
-    p.sendline('ucci')
-    pass
-
-
 class Eleeye:
     def __init__(self):
         self.proc = process('../eleeye/eleeye/ELEEYE.EXE') 
