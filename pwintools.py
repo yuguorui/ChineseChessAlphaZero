@@ -11,9 +11,9 @@ class process:
         self.pipe = Popen(cmd, stdin = PIPE, stdout = PIPE, shell = True)
  
     def sendline(self, delims): 
-        print(delims + b'\n')
         self.pipe.stdin.write(delims + b'\n')
         self.pipe.stdin.flush()
+        return delims + b'\n'
  
     def send(self, delims):
         self.pipe.stdin.write(delims)
