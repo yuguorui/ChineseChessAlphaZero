@@ -344,6 +344,23 @@ class Piece(object):
         else:
             return cls(PIECE_SYMBOLS.index(symbol.lower()), WHITE)
 
+    def __hash__(self):
+        return hash(self.piece_type * (self.color + 1))
+
+    def __eq__(self, other):
+        ne = self.__ne__(other)
+        return NotImplemented if ne is NotImplemented else not ne
+
+    def __ne__(self, other):
+        try:
+            if self.piece_type != other.piece_type:
+                return True
+            elif self.color != other.color:
+                return True
+            else:
+                return False
+        except AttributeError:
+            return NotImplemented
 
 class Move(object):
     """
@@ -655,6 +672,32 @@ class BaseBoard(object):
         king_mask = self.occupied_co[color] & self.kings & ~self.promoted
         if king_mask:
             return msb(king_mask)
+
+    def copy(self):
+        """Creates a copy of the board."""
+        board = type(self)(None)
+
+        board.pawns = self.pawns
+        board.horses = self.horses
+        board.elephants = self.elephants
+        board.rooks = self.rooks
+        board.advisers = self.advisers
+        board.kings = self.kings
+        board.cannons = self.cannons
+
+        board.occupied_co[WHITE] = self.occupied_co[WHITE]
+        board.occupied_co[BLACK] = self.occupied_co[BLACK]
+        board.occupied = self.occupied
+
+        return board
+
+    def __copy__(self):
+        return self.copy()
+
+    def __deepcopy__(self, memo):
+        board = self.copy()
+        memo[id(self)] = board
+        return board
 
 
 class Board(BaseBoard):
