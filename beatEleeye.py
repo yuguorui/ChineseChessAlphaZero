@@ -8,11 +8,10 @@ class Eleeye:
         if self.debug:
             print(self.proc.recvuntil(b'ucciok'))
     
-    def recvlines(self, num_lines=None):
+    def recvlines(self, num_lines=1):
         for i in range(num_lines):
             line = self.proc.recvline()
             if self.debug:
-                print(1)  
                 print(line)
         return line
 
@@ -20,7 +19,7 @@ class Eleeye:
         in_fen = b'position fen' + in_fen
         send_fen = self.proc.sendline(in_fen)
         if self.debug:
-            print(send_fen)
+            print(send_fen) 
         send_depth = self.proc.sendline(f'go depth {depth}'.encode())
         if self.debug:
             print(send_depth)
