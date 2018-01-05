@@ -1,5 +1,5 @@
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from logging import getLogger, DEBUG, StreamHandler, Formatter
 from threading import Lock
 
@@ -11,7 +11,7 @@ from chess_zero.env.chess_env import ChineseChessEnv
 from chess_zero.agent import chinese_chess
 
 logger = getLogger(__name__)
-logger.setLevel(DEBUG)
+# logger.setLevel(DEBUG)
 # create console handler and set level to debug
 ch = StreamHandler()
 ch.setLevel(DEBUG)
@@ -98,11 +98,12 @@ class ChineseChessPlayer:
         with ThreadPoolExecutor(max_workers=self.play_config.search_threads) as executor:
             for _ in range(self.play_config.simulation_num_per_move):
                 futures.append(executor.submit(self.search_my_move, env=env.copy(), is_root_node=True))
-
         vals = [f.result() for f in futures]
 
-        # v = self.search_my_move(env.copy(), True)
-        # vals = [v]
+        # vals = []
+        # for _ in range(self.play_config.simulation_num_per_move):
+        #     vals.append(self.search_my_move(env.copy(), True))
+
         return np.max(vals), vals[0]  # vals[0] is kind of racy
 
     def search_my_move(self, env: ChineseChessEnv, is_root_node=False) -> float:
@@ -193,7 +194,7 @@ class ChineseChessPlayer:
                 logger.debug(f'Move: {mov}')
                 moves_count += 1
                 # print(f'Move: {mov}')
-                mov_p = my_visitstats.p[self.move_lookup[mov]]
+                mov_p = my_visitstats.p[self.move_lookup[mov]]  # move_lookup[mov]代表指定动作的序号
                 my_visitstats.a[mov].p = mov_p
                 tot_p += mov_p
             for a_s in my_visitstats.a.values():
