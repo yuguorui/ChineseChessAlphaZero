@@ -637,7 +637,7 @@ class BaseBoard(object):
                             "two subsequent digits in position part of fen: {0}".format(repr(fen)))
                     field_sum += int(c)
                     previous_was_digit = True
-                elif c.lower() in ["p", "n", "b", "r", "q", "k"]:
+                elif c.lower() in ["p", "h", "e", "r", "c", "k", "a"]:
                     field_sum += 1
                     previous_was_digit = False
                 else:
@@ -654,7 +654,7 @@ class BaseBoard(object):
         # Put pieces on the board.
         square_index = 0
         for c in fen:
-            if c in ["1", "2", "3", "4", "5", "6", "7", "8"]:
+            if c in ["1", "2", "3", "4", "5", "6", "7", "8", "9"]:
                 square_index += int(c)
             elif c.lower() in ["p", "h", "e", "r", "a", "k", "c"]:
                 piece = Piece.from_symbol(c)

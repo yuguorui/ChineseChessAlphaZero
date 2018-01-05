@@ -23,6 +23,7 @@ formatter = Formatter('%(asctime)s - %(thread)d - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+
 def start(config: Config):
     return SelfPlayWorker(config).start()
 
