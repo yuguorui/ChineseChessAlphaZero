@@ -292,18 +292,24 @@ def _rays():
         between_row = []
         for b, bb_b in enumerate(BB_SQUARES):
             if BB_DIAG_ATTACKS[a][0] & bb_b:
-                rays_row.append(
-                    (BB_DIAG_ATTACKS[a][0] & BB_DIAG_ATTACKS[b][0]) | bb_a | bb_b)
-                between_row.append(
-                    BB_DIAG_ATTACKS[a][BB_DIAG_MASKS[a] & bb_b] & BB_DIAG_ATTACKS[b][BB_DIAG_MASKS[b] & bb_a])
+                # rays_row.append(
+                #     (BB_DIAG_ATTACKS[a][0] & BB_DIAG_ATTACKS[b][0]) | bb_a | bb_b)
+                # between_row.append(
+                #     BB_DIAG_ATTACKS[a][BB_DIAG_MASKS[a] & bb_b] & BB_DIAG_ATTACKS[b][BB_DIAG_MASKS[b] & bb_a])
+                """
+                BB_RANK_ATTACKS的第一个参数代表起始棋子，第二个参数代表棋子的遮挡情况
+                下可行的行攻击方法，详情见上面的attack_table函数。
+                """
             elif BB_RANK_ATTACKS[a][0] & bb_b:
                 rays_row.append(BB_RANK_ATTACKS[a][0] | bb_a)
                 between_row.append(
-                    BB_RANK_ATTACKS[a][BB_RANK_MASKS[a] & bb_b] & BB_RANK_ATTACKS[b][BB_RANK_MASKS[b] & bb_a])
+                    BB_RANK_ATTACKS[a][BB_RANK_MASKS[a] & bb_b] &
+                    BB_RANK_ATTACKS[b][BB_RANK_MASKS[b] & bb_a])
             elif BB_FILE_ATTACKS[a][0] & bb_b:
                 rays_row.append(BB_FILE_ATTACKS[a][0] | bb_a)
                 between_row.append(
-                    BB_FILE_ATTACKS[a][BB_FILE_MASKS[a] & bb_b] & BB_FILE_ATTACKS[b][BB_FILE_MASKS[b] & bb_a])
+                    BB_FILE_ATTACKS[a][BB_FILE_MASKS[a] & bb_b] &
+                    BB_FILE_ATTACKS[b][BB_FILE_MASKS[b] & bb_a])
             else:
                 rays_row.append(0)
                 between_row.append(0)
@@ -958,10 +964,8 @@ class Board(BaseBoard):
     def _attackers_mask(self, color, square, occupied):
         rank_pieces = BB_RANK_MASKS[square] & occupied
         file_pieces = BB_FILE_MASKS[square] & occupied
-        # diag_pieces = BB_DIAG_MASKS[square] & occupied
 
         rooks = self.rooks
-        # queens_and_bishops = self.queens | self.bishops
 
         attackers = (
                 (BB_KING_ATTACKS[square] & self.kings) |
@@ -1077,14 +1081,13 @@ class Board(BaseBoard):
         # Generate pawn captures.
         capturers = pawns
         for from_square in scan_reversed(capturers):
-            targets = (BB_PAWN_ATTACKS[self.turn][from_square]
-                       & self.occupied_co[not self.turn] & to_mask)
+            targets = (BB_PAWN_ATTACKS[self.turn][from_square] & to_mask)
 
             for to_square in scan_reversed(targets):
-                if square_row(to_square) in [0, 9]:
-                    yield Move(from_square, to_square, ROOK)
-                else:
-                    yield Move(from_square, to_square)
+                # if square_row(to_square) in [0, 9]:
+                #     yield Move(from_square, to_square, ROOK)
+                # else:
+                yield Move(from_square, to_square)
 
         # Prepare pawn advance generation.
         if self.turn == WHITE:
