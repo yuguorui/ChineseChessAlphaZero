@@ -1,6 +1,5 @@
 uvloop
 profilehooks
-python-chess
 appnope
 bleach
 click
