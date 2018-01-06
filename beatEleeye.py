@@ -15,7 +15,7 @@ class Eleeye:
                 print(line)
         return line
 
-    def eleeye_move(self, in_fen=b'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1', depth=2):
+    def move(self, in_fen=b'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1', depth=2):
         in_fen = b'position fen' + in_fen
         send_fen = self.proc.sendline(in_fen)
         if self.debug:
@@ -38,4 +38,4 @@ if __name__ == '__main__':
     rival = Eleeye(debug=True)
     # while 1:
         # print(rival.proc.recvline())
-    rival.eleeye_move(depth=5)
+    rival.move(depth=5)
