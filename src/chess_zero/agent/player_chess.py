@@ -194,7 +194,6 @@ class ChineseChessPlayer:
                 logger.debug(f'Move: {mov}')
                 moves_count += 1
                 # print(f'Move: {mov}')
-                # TODO: 这里可能存在未处理的bug，不容易复现。
                 mov_p = my_visitstats.p[self.move_lookup[mov]]  # move_lookup[mov]代表指定动作的序号
                 my_visitstats.a[mov].p = mov_p
                 tot_p += mov_p

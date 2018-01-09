@@ -133,6 +133,16 @@ class BoardUnitTest(unittest.TestCase):
             result_set.add(step.ucci())
         self.assertEqual(correct_set, result_set)
 
+    def test_elephant3(self):
+        fen = '9/9/9/p1p6/2b6/9/9/9/9/9 b - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {'c5a7', 'c5e7', 'a6a5'}
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
+
 
 if __name__ == '__main__':
     unittest.main()

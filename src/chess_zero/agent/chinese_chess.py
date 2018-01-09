@@ -230,12 +230,19 @@ BB_KING_ATTACKS = [
 """
 ELEPHANT_INCREMENT = [(16,), (20,), (-20,), (-16,)]
 BB_ELEPHANT_ATTACKS = []
+
+def _elephant_limit(x):
+    if 0 <= x < 45:
+        return _elephant_white_limit(x)
+    else:
+        return _elephant_black_limit(x)
+
 for sq in SQUARES:
     outer_list = []
     for s in range(15, -1, -1):
         inner = 0
         for i in scan_reversed(s):
-            t = _sliding_attacks(sq, BB_ALL, ELEPHANT_INCREMENT[i])
+            t = _sliding_attacks(sq, BB_ALL, ELEPHANT_INCREMENT[i], _elephant_limit)
             inner |= t
         outer_list.append(inner)
     BB_ELEPHANT_ATTACKS.append(outer_list)
