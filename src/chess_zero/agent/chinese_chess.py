@@ -722,7 +722,7 @@ class BaseBoard(object):
         In variants with king promotions, only non-promoted kings are
         considered.
         """
-        king_mask = self.occupied_co[color] & self.kings & ~self.promoted
+        king_mask = self.occupied_co[color] & self.kings
         if king_mask:
             return msb(king_mask)
 
@@ -1056,6 +1056,33 @@ class Board(BaseBoard):
         """
         return self._attackers_mask(color, square, self.occupied)
 
+    def is_king_face_king(self, move):
+        new_kings = self.kings
+        if not new_kings:
+            return False
+        if self.piece_type_at(move.from_square) == KING:
+            new_kings = (new_kings | BB_SQUARES[move.to_square]) ^ BB_SQUARES[move.from_square]
+        new_occupied = (self.occupied | BB_SQUARES[move.to_square]) ^ BB_SQUARES[move.from_square]
+        new_occupied_co = [BB_VOID, BB_VOID]
+        new_occupied_co[self.turn] = (self.occupied_co[self.turn] | BB_SQUARES[move.to_square]) ^ BB_SQUARES[move.from_square]
+        new_occupied_co[not self.turn] = self.occupied_co[not self.turn]
+        
+        king_white = msb(new_occupied_co[True] & new_kings)
+        king_black = msb(new_occupied_co[False] & new_kings)
+        col_white = square_col(king_white)
+        col_black = square_col(king_black)
+        if col_white == col_black:
+            mask = new_kings
+            row_white = square_row(king_white)
+            for i in range(0, row_white):
+                mask = mask | (new_occupied & BB_SQUARES[get_square(i, col_white)])
+            row_black = square_row(king_black)
+            for i in range(row_black+1, 10):
+                mask = mask | (new_occupied & BB_SQUARES[get_square(i, col_black)])
+            mask = new_occupied & BB_COL[col_white] ^ mask
+            return not mask
+        return False
+
     def is_pseudo_legal(self, move):
         # Null moves are not pseudo legal.
         if not move:
@@ -1105,7 +1132,8 @@ class Board(BaseBoard):
         return not self._is_safe(king, False, move)
 
     def is_legal(self, move):
-        return not self.is_variant_end() and self.is_pseudo_legal(move) # and not self.is_into_check(move)
+        return not self.is_variant_end() and self.is_pseudo_legal(move) and not self.is_king_face_king(move)
+        # and not self.is_into_check(move)
 
     def is_variant_end(self):
         """
@@ -1323,8 +1351,9 @@ class Board(BaseBoard):
         #                 yield move
         # else:
         for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
-            logger.debug(f'Move: {move}')
-            yield move
+            if not self.is_king_face_king(move):
+                logger.debug(f'Move: {move}')
+                yield move
 
     def is_game_over(self, claim_draw=False):
         """

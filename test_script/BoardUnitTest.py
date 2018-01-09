@@ -154,5 +154,15 @@ class BoardUnitTest(unittest.TestCase):
             result_set.add(step.ucci())
         self.assertEqual(correct_set, result_set)
 
+    def test_king_face_king(self):
+        fen = '9/4k4/9/9/9/9/4R4/9/9/5K3 b - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {"e8e9", "e8e7", "e8d8"}
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
+
 if __name__ == '__main__':
     unittest.main()
