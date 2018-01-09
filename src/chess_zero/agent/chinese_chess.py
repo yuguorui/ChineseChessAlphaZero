@@ -4,6 +4,7 @@
 #
 import copy
 import logging
+from IPython import embed
 
 logger = logging.getLogger(__name__)
 logger.level = logging.DEBUG
@@ -48,6 +49,10 @@ SQUARES = [
     A7, B7, C7, D7, E7, F7, G7, H7, I7,
     A8, B8, C8, D8, E8, F8, G8, H8, I8,
     A9, B9, C9, D9, E9, F9, G9, H9, I9] = range(90)
+
+
+def get_square(r, c):
+    return SQUARES[r * 9 + c]
 
 
 def square_col(square):
@@ -936,10 +941,9 @@ class Board(BaseBoard):
         """
         bb_square = BB_SQUARES[square]
 
+        # 炮在这里不加处理
         if bb_square & self.cannons:
-            # TODO: 补全炮的路径枚举
-            logger.debug('Found cannon')
-            return 0
+            return BB_ALL
 
         if bb_square & self.pawns:
             if bb_square & self.occupied_co[WHITE]:
@@ -972,8 +976,17 @@ class Board(BaseBoard):
                 (BB_HORSE_ATTACKS[square] & self.horses) |
                 (BB_RANK_ATTACKS[square][rank_pieces] & rooks) |
                 (BB_FILE_ATTACKS[square][file_pieces] & rooks) |
-                # TODO 炮
                 (BB_PAWN_ATTACKS[not color][square] & self.pawns))
+
+        # Find the cannon, check if the square is in it.
+        cannons = self.cannons & self.occupied_co[color]
+        cannon_bb = 0
+        for c in scan_reversed(cannons):
+            attacked = list(self._cannon_attack(c, color))
+            if square in attacked:
+                cannon_bb |= BB_SQUARES[c]
+
+        attackers |= cannon_bb
 
         return attackers & self.occupied_co[color]
 
@@ -1011,13 +1024,6 @@ class Board(BaseBoard):
         # Destination square can not be occupied.
         if self.occupied_co[self.turn] & to_mask:
             return False
-
-        # i dont know why split into tow part
-        # and i commit the PAWN one
-
-        # # Handle pawn moves.
-        # if piece == PAWN:
-        # 	return move in self.generate_pseudo_legal_moves(from_mask, to_mask)
 
         # Handle all other pieces.
         return bool(self.attacks_mask(move.from_square) & to_mask)
@@ -1057,6 +1063,88 @@ class Board(BaseBoard):
         """
         return False
 
+    def _cannon_attack(self, square, turn=None):
+        """
+        生成炮的可能走法。
+        :param square: int，[0,90)，代表棋子的位置
+        :return:
+        """
+        if turn is None:
+            turn = self.turn
+
+        r = square_row(square)
+        c = square_col(square)
+        bb_same_row = BB_ROW[r] & self.occupied
+        bb_same_col = BB_COL[c] & self.occupied
+        pieces_row_index = list(scan_reversed(bb_same_row))
+        pieces_col_index = list(scan_reversed(bb_same_col))
+        # 生成攻击
+        r_index = pieces_row_index.index(square)
+        c_index = pieces_col_index.index(square)
+
+        if r_index - 2 >= 0:
+            to_square = pieces_row_index[r_index - 2]
+            if BB_SQUARES[to_square] & self.occupied_co[~turn]:
+                yield Move(square, to_square)
+
+        if r_index + 2 < len(pieces_row_index):
+            to_square = pieces_row_index[r_index + 2]
+            if BB_SQUARES[to_square] & self.occupied_co[~turn]:
+                yield Move(square, to_square)
+
+        if c_index - 2 >= 0:
+            to_square = pieces_col_index[c_index - 2]
+            if BB_SQUARES[to_square] & self.occupied_co[~turn]:
+                yield Move(square, to_square)
+        if c_index +2 < len(pieces_col_index):
+            to_square = pieces_col_index[c_index + 2]
+            if BB_SQUARES[to_square] & self.occupied_co[~turn]:
+                yield Move(square, to_square)
+
+    def _cannon_move(self, square):
+        """
+        生成炮的可能走法。
+        :param square: int，[0,90)，代表棋子的位置
+        :return:
+        """
+        r = square_row(square)
+        c = square_col(square)
+        bb_same_row = BB_ROW[r] & self.occupied
+        bb_same_col = BB_COL[c] & self.occupied
+        pieces_row_index = list(scan_reversed(bb_same_row))
+        pieces_col_index = list(scan_reversed(bb_same_col))
+
+        # 生成移动代码（不包含攻击）
+        r_index = pieces_row_index.index(square)
+        if r_index + 1 < len(pieces_row_index):
+            r_down_edge = pieces_row_index[r_index + 1] + 1
+        else:
+            r_down_edge = get_square(r, 0)
+        if r_index - 1 >= 0:
+            r_up_edge = pieces_row_index[r_index - 1] - 1
+        else:
+            r_up_edge = get_square(r, 8)
+
+        for x in range(r_down_edge, r_up_edge + 1):
+            if x == square:
+                continue
+            yield Move(square, x)
+
+        c_index = pieces_col_index.index(square)
+        if c_index + 1 < len(pieces_col_index):
+            r_left_edge = pieces_col_index[c_index + 1] + 9
+        else:
+            r_left_edge = get_square(0, c)
+        if c_index - 1 >= 0:
+            r_right_edge = pieces_col_index[c_index - 1] - 9
+        else:
+            r_right_edge = get_square(9, c)
+
+        for x in range(r_left_edge, r_right_edge + 9, 9):
+            if x == square:
+                continue
+            yield Move(square, x)
+
     def generate_pseudo_legal_moves(self, from_mask=BB_ALL, to_mask=BB_ALL):
         """
         生成当前局面下，所有种类棋子可行的移动路径。
@@ -1065,13 +1153,20 @@ class Board(BaseBoard):
         our_pieces = self.occupied_co[self.turn]
 
         # Generate piece moves.
-        non_pawns = our_pieces & ~self.pawns & from_mask
+        non_pawns = our_pieces & ~self.pawns & ~self.cannons & from_mask
         for from_square in scan_reversed(non_pawns):
             # logger.debug(f'from square: {square_name(from_square)}')
             moves = self.attacks_mask(from_square) & ~our_pieces & to_mask
             for to_square in scan_reversed(moves):
                 # logger.debug(f'to square: {square_name(to_square)}')
                 yield Move(from_square, to_square)
+
+        cannons = self.cannons & self.occupied_co[self.turn] & from_mask
+        for c in scan_reversed(cannons):
+            yield from self._cannon_attack(c)
+
+        for c in scan_reversed(cannons):
+            yield from self._cannon_move(c)
 
         # The remaining moves are all pawn moves.
         pawns = self.pawns & self.occupied_co[self.turn] & from_mask
@@ -1120,7 +1215,10 @@ class Board(BaseBoard):
         checker = msb(checkers)
         if BB_SQUARES[checker] == checkers:
             # Capture or block a single checker.
-            target = BB_BETWEEN[king][checker] | checkers
+            try:
+                target = BB_BETWEEN[king][checker] | checkers
+            except IndexError as e:
+                print(e)
 
             for move in self.generate_pseudo_legal_moves(~self.kings & from_mask, target & to_mask):
                 yield move
@@ -1287,7 +1385,6 @@ class Board(BaseBoard):
         # return bool(
         #     BB_SQUARES[move.from_square] & self.pawns or BB_SQUARES[move.to_square] & self.occupied_co[not self.turn])
         return bool(BB_SQUARES[move.to_square] & self.occupied_co[not self.turn])
-
 
     def push(self, move):
         """

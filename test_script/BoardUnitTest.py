@@ -61,6 +61,36 @@ class BoardUnitTest(unittest.TestCase):
         board = Board(fen)
         self.assertEqual(fen, board.fen())
 
+    def test_cannon(self):
+        fen = '9/9/4P4/9/4P4/9/p1R1C4/9/4N4/9 w - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {'c3c9', 'c3c8', 'c3c7', 'c3c6', 'c3c5', 'c3c4', 'c3c2',
+                       'c3c1', 'c3c0', 'c3d3', 'c3b3', 'c3a3', 'e1f3', 'e1d3',
+                       'e1g2', 'e1c2', 'e1g0', 'e1c0', 'e3e4', 'e3e2', 'e3d3',
+                       'e3f3', 'e3g3', 'e3h3', 'e3i3', 'e3a3', 'e7e8', 'e7f7',
+                       'e7d7', 'e5e6', 'e5f5', 'e5d5', 'e7e8'}
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+            # print(step)
+        self.assertEqual(correct_set, result_set)
+
+        def test_cannon2(self):
+            fen = '9/9/9/9/9/9/p1R1C4/9/4N4/9 w - - 0 1'
+            fen = replace_chess(fen)
+            board = Board(fen)
+            correct_set = {'e3e2', 'e3e4', 'e3e5', 'e3e6', 'e3e7', 'e3e8', 'e3e9',
+                           'e3f3', 'e3g3', 'e3h3', 'e3i3', 'e3d3', 'e3a3', 'e1c2',
+                           'e1c0', 'e1d3', 'e1f3', 'e1g2', 'e1g0', 'c3c0', 'c3c1',
+                           'c3c2', 'c3c4', 'c3c5', 'c3c6', 'c3c7', 'c3c8', 'c3c9',
+                           'c3a3', 'c3b3', 'c3d3', 'a3a2', 'a3b3',}
+            result_set = set()
+            for step in board.generate_legal_moves():
+                result_set.add(step.ucci())
+            self.assertEqual(correct_set, result_set)
+
+
 
 if __name__ == '__main__':
     unittest.main()
