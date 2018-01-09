@@ -217,11 +217,28 @@ BB_KING_ATTACKS = [
         lambda x: _king_white_limit(x) or _king_black_limit(x)) for sq in SQUARES
 ]
 
-BB_ELEPHANT_ATTACKS = [
-    _sliding_attacks(
-        sq, BB_ALL, [20, 16, -20, -16],
-        lambda x: _elephant_white_limit(x) or _elephant_black_limit(x)) for sq in SQUARES
-]
+# BB_ELEPHANT_ATTACKS = [
+#     _sliding_attacks(
+#         sq, BB_ALL, [20, 16, -20, -16],
+#         lambda x: _elephant_white_limit(x) or _elephant_black_limit(x)) for sq in SQUARES
+# ]
+
+"""
+0---1
+|-E-|
+2---3
+"""
+ELEPHANT_INCREMENT = [(16,), (20,), (-20,), (-16,)]
+BB_ELEPHANT_ATTACKS = []
+for sq in SQUARES:
+    outer_list = []
+    for s in range(15, -1, -1):
+        inner = 0
+        for i in scan_reversed(s):
+            t = _sliding_attacks(sq, BB_ALL, ELEPHANT_INCREMENT[i])
+            inner |= t
+        outer_list.append(inner)
+    BB_ELEPHANT_ATTACKS.append(outer_list)
 
 BB_ADVISOR_ATTACKS = [
     _sliding_attacks(
@@ -972,7 +989,7 @@ class Board(BaseBoard):
         elif bb_square & self.kings:
             return BB_KING_ATTACKS[square]
         elif bb_square & self.elephants:
-            return BB_ELEPHANT_ATTACKS[square]
+            return BB_ELEPHANT_ATTACKS[square][self._get_elephant_around(square)]
         elif bb_square & self.advisers:
             return BB_ADVISOR_ATTACKS[square]
         else:
@@ -985,6 +1002,14 @@ class Board(BaseBoard):
     def _get_horse_around(self, square):
         ans = 0
         dd = [-1, 9, 1, -9]
+        for i, d in enumerate(dd):
+            if 0 <= square + d < 90 and (self.occupied & BB_SQUARES[square + d]):
+                ans |= 1 << i
+        return ans
+
+    def _get_elephant_around(self, square):
+        ans = 0
+        dd = [8, 10, -10, -8]
         for i, d in enumerate(dd):
             if 0 <= square + d < 90 and (self.occupied & BB_SQUARES[square + d]):
                 ans |= 1 << i

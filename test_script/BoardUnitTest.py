@@ -4,11 +4,12 @@ from chess_zero.agent.chinese_chess import Board
 
 
 def replace_chess(fen):
-    fen = fen.replace('n', 'h')
-    fen = fen.replace('N', 'H')
-    fen = fen.replace('b', 'e')
-    fen = fen.replace('B', 'E')
-    return fen
+    fens = fen.split()
+    fens[0] = fens[0].replace('n', 'h')
+    fens[0] = fens[0].replace('N', 'H')
+    fens[0] = fens[0].replace('b', 'e')
+    fens[0] = fens[0].replace('B', 'E')
+    return " ".join(fens)
 
 
 class BoardUnitTest(unittest.TestCase):
@@ -86,31 +87,51 @@ class BoardUnitTest(unittest.TestCase):
             # print(step)
         self.assertEqual(correct_set, result_set)
 
-        def test_cannon2(self):
-            fen = '9/9/9/9/9/9/p1R1C4/9/4N4/9 w - - 0 1'
-            fen = replace_chess(fen)
-            board = Board(fen)
-            correct_set = {'e3e2', 'e3e4', 'e3e5', 'e3e6', 'e3e7', 'e3e8', 'e3e9',
-                           'e3f3', 'e3g3', 'e3h3', 'e3i3', 'e3d3', 'e3a3', 'e1c2',
-                           'e1c0', 'e1d3', 'e1f3', 'e1g2', 'e1g0', 'c3c0', 'c3c1',
-                           'c3c2', 'c3c4', 'c3c5', 'c3c6', 'c3c7', 'c3c8', 'c3c9',
-                           'c3a3', 'c3b3', 'c3d3', 'a3a2', 'a3b3', }
-            result_set = set()
-            for step in board.generate_legal_moves():
-                result_set.add(step.ucci())
-            self.assertEqual(correct_set, result_set)
+    def test_cannon2(self):
+        fen = '9/9/9/9/9/9/p1R1C4/9/4N4/9 w - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {'e3e2', 'e3e4', 'e3e5', 'e3e6', 'e3e7', 'e3e8', 'e3e9',
+                       'e3f3', 'e3g3', 'e3h3', 'e3i3', 'e3d3', 'e3a3', 'e1c2',
+                       'e1c0', 'e1d3', 'e1f3', 'e1g2', 'e1g0', 'c3c0', 'c3c1',
+                       'c3c2', 'c3c4', 'c3c5', 'c3c6', 'c3c7', 'c3c8', 'c3c9',
+                       'c3a3', 'c3b3', 'c3d3' }
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
 
-        def test_horse(self):
-            fen = '9/9/9/9/5p3/9/3RN4/4p1P2/9/9 w - - 0 1'
-            fen = replace_chess(fen)
-            board = Board(fen)
-            correct_set = {'e3d5', 'e3f5', 'e3g4', 'd3d0', 'd3d1', 'd3d2', 'd3d4',
-                           'd3d5', 'd3d6', 'd3d7', 'd3d8', 'd3d9', 'd3c3', 'd3b3',
-                           'd3a3', 'e2d2', 'e2f2', 'e2e1', 'g2g3', 'f5f4', }
-            result_set = set()
-            for step in board.generate_legal_moves():
-                result_set.add(step.ucci())
-            self.assertEqual(correct_set, result_set)
+    def test_horse(self):
+        fen = '9/9/9/9/5p3/9/3RN4/4p1P2/9/9 w - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {'e3d5', 'e3f5', 'e3g4', 'd3d0', 'd3d1', 'd3d2', 'd3d4',
+                       'd3d5', 'd3d6', 'd3d7', 'd3d8', 'd3d9', 'd3c3', 'd3b3',
+                       'd3a3', 'g2g3', }
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
+
+    def test_elephant(self):
+        fen = '9/9/9/9/9/9/9/4B4/3K1p3/9 w - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {'d1e1', 'd1d2', 'd1d0', 'e2c4', 'e2g4'}
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
+
+    def test_elephant2(self):
+        fen = '9/9/4b4/9/9/9/9/9/9/9 b - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {'e7c9', 'e7c5', 'e7g9', 'e7g5'}
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
 
 
 if __name__ == '__main__':
