@@ -537,7 +537,7 @@ class BaseBoard(object):
         self.occupied = self.occupied_co[WHITE] | self.occupied_co[BLACK]
 
     def reset_board(self):
-        self._reset_board()
+        self._set_board_fen(STARTING_BOARD_FEN)
 
     def _clear_board(self):
         self.pawns = BB_VOID
@@ -1258,9 +1258,13 @@ class Board(BaseBoard):
         sliders = checkers & self.rooks
 
         attacked = 0
-        for checker in scan_reversed(sliders):
-            attacked |= BB_RAYS[king][checker] & ~BB_SQUARES[checker]
-
+        try:
+            for checker in scan_reversed(sliders):
+                attacked |= BB_RAYS[king][checker] & ~BB_SQUARES[checker]
+        except IndexError as e:
+            print(checker)
+            
+            
         if BB_SQUARES[king] & from_mask:
             for to_square in scan_reversed(BB_KING_ATTACKS[king] & ~self.occupied_co[self.turn] & ~attacked & to_mask):
                 yield Move(king, to_square)
@@ -1300,27 +1304,27 @@ class Board(BaseBoard):
         if self.is_variant_end():
             return
 
-        king_mask = self.kings & self.occupied_co[self.turn]
-        if king_mask:
-            king = msb(king_mask)
-            blockers = False  # self._slider_blockers(king)
-            checkers = self.attackers_mask(not self.turn, king)
-            if checkers:
-                # 当前被将军
-                for move in self._generate_evasions(king, checkers, from_mask, to_mask):
-                    if self._is_safe(king, blockers, move):
-                        logger.debug(f'Move: {move}')
-                        yield move
-            else:
-                # 当前未被将军
-                for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
-                    if self._is_safe(king, blockers, move):
-                        logger.debug(f'Move: {move}')
-                        yield move
-        else:
-            for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
-                logger.debug(f'Move: {move}')
-                yield move
+        # king_mask = self.kings & self.occupied_co[self.turn]
+        # if king_mask:
+        #     king = msb(king_mask)
+        #     blockers = False  # self._slider_blockers(king)
+        #     checkers = self.attackers_mask(not self.turn, king)
+        #     if checkers:
+        #         # 当前被将军
+        #         for move in self._generate_evasions(king, checkers, from_mask, to_mask):
+        #             if self._is_safe(king, blockers, move):
+        #                 logger.debug(f'Move: {move}')
+        #                 yield move
+        #     else:
+        #         # 当前未被将军
+        #         for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
+        #             if self._is_safe(king, blockers, move):
+        #                 logger.debug(f'Move: {move}')
+        #                 yield move
+        # else:
+        for move in self.generate_pseudo_legal_moves(from_mask, to_mask):
+            logger.debug(f'Move: {move}')
+            yield move
 
     def is_game_over(self, claim_draw=False):
         """
@@ -1360,7 +1364,7 @@ class Board(BaseBoard):
         """
 
         # Checkmate.
-        if self.is_checkmate():
+        if self.my_checkmate():
             return "0-1" if self.turn == WHITE else "1-0"
 
         # Draw claimed.
@@ -1386,7 +1390,11 @@ class Board(BaseBoard):
         """Returns if the current side to move is in check."""
         king = self.king(self.turn)
         return king is not None and self.is_attacked_by(not self.turn, king)
-
+    
+    def my_checkmate(self):
+        king = self.king(self.turn)
+        return king is None
+        
     def is_checkmate(self):
         """Checks if the current position is a checkmate."""
         if not self.is_check():

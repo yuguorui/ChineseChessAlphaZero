@@ -143,6 +143,16 @@ class BoardUnitTest(unittest.TestCase):
             result_set.add(step.ucci())
         self.assertEqual(correct_set, result_set)
 
+    def test_king_win(self):
+        fen = '9/4k4/9/9/9/9/4R4/9/9/5K3 w - - 0 1'
+        fen = replace_chess(fen)
+        board = Board(fen)
+        correct_set = {"e3e8", "e3e0", "e3e1", "e3e2", "e3e4", "e3e5", "e3e6", "e3e7", "e3a3", "e3b3", "e3c3", "e3d3",
+                       "e3f3", "e3g3", "e3h3", "e3i3", "f0e0", "f0f1"}
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
 
 if __name__ == '__main__':
     unittest.main()
