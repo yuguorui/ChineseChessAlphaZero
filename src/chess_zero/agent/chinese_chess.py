@@ -1105,7 +1105,7 @@ class Board(BaseBoard):
         return not self._is_safe(king, False, move)
 
     def is_legal(self, move):
-        return not self.is_variant_end() and self.is_pseudo_legal(move) and not self.is_into_check(move)
+        return not self.is_variant_end() and self.is_pseudo_legal(move) # and not self.is_into_check(move)
 
     def is_variant_end(self):
         """
