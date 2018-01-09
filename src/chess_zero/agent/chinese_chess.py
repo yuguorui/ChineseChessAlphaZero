@@ -188,11 +188,28 @@ def _sliding_attacks(square, occupied, deltas, limit=_default_limit):
     return attacks
 
 
-BB_HORSE_ATTACKS = [
-    _sliding_attacks(
-        sq, BB_ALL, [19, 17, 11, 7, -19, -17, -11, -7])
-    for sq in SQUARES
-]
+# BB_HORSE_ATTACKS = [
+#     _sliding_attacks(
+#         sq, BB_ALL, [19, 17, 11, 7, -19, -17, -11, -7])
+#     for sq in SQUARES
+# ]
+
+"""
+  1
+0-h-2
+  3
+"""
+HORSE_INCREMENT = [(7, -11), (17, 19), (-7, 11), (-19, -17)]
+BB_HORSE_ATTACKS = []
+for sq in SQUARES:
+    outer_list = []
+    for s in range(15, -1, -1):
+        inner = 0
+        for i in scan_reversed(s):
+            t = _sliding_attacks(sq, BB_ALL, HORSE_INCREMENT[i])
+            inner |= t
+        outer_list.append(inner)
+    BB_HORSE_ATTACKS.append(outer_list)
 
 BB_KING_ATTACKS = [
     _sliding_attacks(
@@ -951,7 +968,7 @@ class Board(BaseBoard):
             else:
                 return BB_PAWN_ATTACKS[BLACK][square]
         elif bb_square & self.horses:
-            return BB_HORSE_ATTACKS[square]
+            return BB_HORSE_ATTACKS[square][self._get_horse_around(square)]
         elif bb_square & self.kings:
             return BB_KING_ATTACKS[square]
         elif bb_square & self.elephants:
@@ -965,6 +982,14 @@ class Board(BaseBoard):
                     BB_FILE_MASKS[square] & self.occupied])
             return attacks
 
+    def _get_horse_around(self, square):
+        ans = 0
+        dd = [-1, 9, 1, -9]
+        for i, d in enumerate(dd):
+            if 0 <= square + d < 90 and (self.occupied & BB_SQUARES[square + d]):
+                ans |= 1 << i
+        return ans
+
     def _attackers_mask(self, color, square, occupied):
         rank_pieces = BB_RANK_MASKS[square] & occupied
         file_pieces = BB_FILE_MASKS[square] & occupied
@@ -973,7 +998,7 @@ class Board(BaseBoard):
 
         attackers = (
                 (BB_KING_ATTACKS[square] & self.kings) |
-                (BB_HORSE_ATTACKS[square] & self.horses) |
+                (BB_HORSE_ATTACKS[square][self._get_horse_around(square)] & self.horses) |
                 (BB_RANK_ATTACKS[square][rank_pieces] & rooks) |
                 (BB_FILE_ATTACKS[square][file_pieces] & rooks) |
                 (BB_PAWN_ATTACKS[not color][square] & self.pawns))
@@ -1096,7 +1121,7 @@ class Board(BaseBoard):
             to_square = pieces_col_index[c_index - 2]
             if BB_SQUARES[to_square] & self.occupied_co[~turn]:
                 yield Move(square, to_square)
-        if c_index +2 < len(pieces_col_index):
+        if c_index + 2 < len(pieces_col_index):
             to_square = pieces_col_index[c_index + 2]
             if BB_SQUARES[to_square] & self.occupied_co[~turn]:
                 yield Move(square, to_square)
@@ -1176,7 +1201,7 @@ class Board(BaseBoard):
         # Generate pawn captures.
         capturers = pawns
         for from_square in scan_reversed(capturers):
-            targets = (BB_PAWN_ATTACKS[self.turn][from_square] & to_mask)
+            targets = (BB_PAWN_ATTACKS[self.turn][from_square] & ~self.occupied_co[self.turn])
 
             for to_square in scan_reversed(targets):
                 # if square_row(to_square) in [0, 9]:
@@ -1185,21 +1210,17 @@ class Board(BaseBoard):
                 yield Move(from_square, to_square)
 
         # Prepare pawn advance generation.
-        if self.turn == WHITE:
-            single_moves = pawns << 9 & ~self.occupied
-        else:
-            single_moves = pawns >> 9 & ~self.occupied
-
-        single_moves &= to_mask
-
-        # Generate single pawn moves.
-        for to_square in scan_reversed(single_moves):
-            from_square = to_square + (9 if self.turn == BLACK else -9)
-
-            if square_row(to_square) in [0, 9]:
-                yield Move(from_square, to_square, ROOK)
-            else:
-                yield Move(from_square, to_square)
+        # if self.turn == WHITE:
+        #     single_moves = pawns << 9 & ~self.occupied
+        # else:
+        #     single_moves = pawns >> 9 & ~self.occupied
+        #
+        # single_moves &= to_mask
+        #
+        # # Generate single pawn moves.
+        # for to_square in scan_reversed(single_moves):
+        #     from_square = to_square + (9 if self.turn == BLACK else -9)
+        #     yield Move(from_square, to_square)
 
     def _generate_evasions(self, king, checkers, from_mask=BB_ALL, to_mask=BB_ALL):
         sliders = checkers & self.rooks
@@ -1215,10 +1236,7 @@ class Board(BaseBoard):
         checker = msb(checkers)
         if BB_SQUARES[checker] == checkers:
             # Capture or block a single checker.
-            try:
-                target = BB_BETWEEN[king][checker] | checkers
-            except IndexError as e:
-                print(e)
+            target = BB_BETWEEN[king][checker] | checkers
 
             for move in self.generate_pseudo_legal_moves(~self.kings & from_mask, target & to_mask):
                 yield move

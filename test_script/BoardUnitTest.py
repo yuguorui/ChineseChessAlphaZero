@@ -51,6 +51,16 @@ class BoardUnitTest(unittest.TestCase):
             result_set.add(step.ucci())
         self.assertEqual(correct_set, result_set)
 
+    def test_pawn4(self):
+        fen = '9/9/9/9/7Pp/8c/9/9/9/9 b - - 0 33'
+        board = Board(fen)
+        correct_set = {'i4a4', 'i4b4', 'i4c4', 'i4d4', 'i4e4', 'i4f4', 'i4g4',
+                       'i4h4', 'i4i3', 'i4i2', 'i4i1', 'i4i0', }
+        result_set = set()
+        for step in board.generate_legal_moves():
+            result_set.add(step.ucci())
+        self.assertEqual(correct_set, result_set)
+
     def test_fen(self):
         """
         测试FEN字符串的设置是否存在问题。
@@ -84,12 +94,23 @@ class BoardUnitTest(unittest.TestCase):
                            'e3f3', 'e3g3', 'e3h3', 'e3i3', 'e3d3', 'e3a3', 'e1c2',
                            'e1c0', 'e1d3', 'e1f3', 'e1g2', 'e1g0', 'c3c0', 'c3c1',
                            'c3c2', 'c3c4', 'c3c5', 'c3c6', 'c3c7', 'c3c8', 'c3c9',
-                           'c3a3', 'c3b3', 'c3d3', 'a3a2', 'a3b3',}
+                           'c3a3', 'c3b3', 'c3d3', 'a3a2', 'a3b3', }
             result_set = set()
             for step in board.generate_legal_moves():
                 result_set.add(step.ucci())
             self.assertEqual(correct_set, result_set)
 
+        def test_horse(self):
+            fen = '9/9/9/9/5p3/9/3RN4/4p1P2/9/9 w - - 0 1'
+            fen = replace_chess(fen)
+            board = Board(fen)
+            correct_set = {'e3d5', 'e3f5', 'e3g4', 'd3d0', 'd3d1', 'd3d2', 'd3d4',
+                           'd3d5', 'd3d6', 'd3d7', 'd3d8', 'd3d9', 'd3c3', 'd3b3',
+                           'd3a3', 'e2d2', 'e2f2', 'e2e1', 'g2g3', 'f5f4', }
+            result_set = set()
+            for step in board.generate_legal_moves():
+                result_set.add(step.ucci())
+            self.assertEqual(correct_set, result_set)
 
 
 if __name__ == '__main__':
