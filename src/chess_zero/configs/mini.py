@@ -1,6 +1,6 @@
 class EvaluateConfig:
     def __init__(self):
-        self.vram_frac = 1.0
+        self.vram_frac = 0.85
         self.game_num = 50
         self.replace_rate = 0.55
         self.play_config = PlayConfig()
@@ -24,9 +24,9 @@ class PlayDataConfig:
 
 class PlayConfig:
     def __init__(self):
-        self.max_processes = 1
+        self.max_processes = 10
         self.search_threads = 20
-        self.vram_frac = 1.0
+        self.vram_frac = 0.85
         self.simulation_num_per_move = 100
         self.thinking_loop = 1
         self.logging_thinking = False
@@ -37,14 +37,14 @@ class PlayConfig:
         self.virtual_loss = 3
         self.resign_threshold = -0.8
         self.min_resign_turn = 5
-        self.max_game_length = 1000
+        self.max_game_length = 300
 
 
 class TrainerConfig:
     def __init__(self):
         self.min_data_size_to_learn = 0
         self.cleaning_processes = 5 # RAM explosion...
-        self.vram_frac = 1.0
+        self.vram_frac = 0.85
         self.batch_size = 384 # tune this to your gpu memory
         self.epoch_to_checkpoint = 1
         self.dataset_size = 100000

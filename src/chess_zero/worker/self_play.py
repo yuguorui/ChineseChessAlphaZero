@@ -103,12 +103,12 @@ def self_play_buffer(config, cur) -> (ChineseChessPlayer, list):
         else:
             action = black.action(env)
         env.step(action)
-        print(f'Move: {action}')
-        logger.info(f'Move: {action}')
+        # print(f'Move: {action}')
+        logger.debug(f'Move: {action}')
         # print(f'{env.board}')
-        print(f'{env.board.fen()}')
-        logger.info(f'{env.board.fen()}')
-        logger.info('=====================================')
+        # print(f'{env.board.fen()}')
+        logger.debug(f'{env.board.fen()}')
+        logger.debug('=====================================')
         if env.num_halfmoves >= config.play.max_game_length:
             env.adjudicate()
 

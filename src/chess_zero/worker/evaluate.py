@@ -36,10 +36,10 @@ class EvaluateWorker:
     def start(self):
         while True:
             ng_model, model_dir = self.load_next_generation_model()
-            logger.debug(f"start evaluate model {model_dir}")
+            logger.info(f"start evaluate model {model_dir}")
             ng_is_great = self.evaluate_model(ng_model)
             if ng_is_great:
-                logger.debug(f"New Model become best model: {model_dir}")
+                logger.info(f"New Model become best model: {model_dir}")
                 save_as_best_model(ng_model)
                 self.current_model = ng_model
             self.move_model(model_dir)
@@ -62,7 +62,7 @@ class EvaluateWorker:
                 results.append(ng_score)
                 win_rate = sum(results) / len(results)
                 game_idx = len(results)
-                logger.debug(f"game {game_idx:3}: ng_score={ng_score:.1f} as {'black' if current_white else 'white'} "
+                logger.info(f"game {game_idx:3}: ng_score={ng_score:.1f} as {'black' if current_white else 'white'} "
                              f"{'by resign ' if env.resigned else '          '}"
                              f"win_rate={win_rate*100:5.1f}% "
                              f"{env.board.fen().split(' ')[0]}")
@@ -74,19 +74,19 @@ class EvaluateWorker:
                 print(env, colors)
 
                 if len(results) - sum(results) >= self.config.eval.game_num * (1 - self.config.eval.replace_rate):
-                    logger.debug(f"lose count reach {results.count(0)} so give up challenge")
+                    logger.info(f"lose count reach {results.count(0)} so give up challenge")
                     return False
                 if sum(results) >= self.config.eval.game_num * self.config.eval.replace_rate:
-                    logger.debug(f"win count reach {results.count(1)} so change best model")
+                    logger.info(f"win count reach {results.count(1)} so change best model")
                     return True
 
         win_rate = sum(results) / len(results)
-        logger.debug(f"winning rate {win_rate*100:.1f}%")
+        logger.info(f"winning rate {win_rate*100:.1f}%")
         return win_rate >= self.config.eval.replace_rate
 
     def move_model(self, model_dir):
         rc = self.config.resource
-        new_dir = os.path.join(rc.next_generation_model_dir, "copies", model_dir.name)
+        new_dir = os.path.join(rc.next_generation_model_dir, "copies", model_dir)
         os.rename(model_dir, new_dir)
 
     def load_current_model(self):

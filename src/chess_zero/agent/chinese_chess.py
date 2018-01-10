@@ -4,7 +4,6 @@
 #
 import copy
 import logging
-from IPython import embed
 
 logger = logging.getLogger(__name__)
 logger.level = logging.DEBUG
