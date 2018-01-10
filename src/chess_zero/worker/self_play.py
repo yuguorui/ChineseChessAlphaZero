@@ -2,7 +2,7 @@ import os
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
-from logging import getLogger, DEBUG, StreamHandler, Formatter
+from logging import getLogger
 from multiprocessing import Manager
 from threading import Thread
 from time import time
@@ -11,17 +11,15 @@ from chess_zero.agent.model_chess import ChessModel
 from chess_zero.agent.player_chess import ChineseChessPlayer
 from chess_zero.config import Config
 from chess_zero.env.chess_env import ChineseChessEnv, Winner
-from chess_zero.lib.data_helper import get_game_data_filenames, write_game_data_to_file  # , pretty_print
-from chess_zero.lib.model_helper import load_best_model_weight, save_as_best_model, \
-    reload_best_model_weight_if_changed
+from chess_zero.lib.data_helper import (get_game_data_filenames,  # , pretty_print
+                                        write_game_data_to_file)
+from chess_zero.lib.logger import setup_module_logger
+from chess_zero.lib.model_helper import (load_best_model_weight,
+                                         reload_best_model_weight_if_changed,
+                                         save_as_best_model)
 
 logger = getLogger(__name__)
-logger.setLevel(DEBUG)
-ch = StreamHandler()
-ch.setLevel(DEBUG)
-formatter = Formatter('%(asctime)s - %(thread)d - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+setup_module_logger(logger, 'self.log')
 
 
 def start(config: Config):
@@ -53,9 +51,10 @@ class SelfPlayWorker:
                 start_time = time()
                 env, data = futures.popleft().result()
                 game_idx += 1
-                print(f"game {game_idx:3} time={time() - start_time:5.1f}s "
+                logger.info(f"game {game_idx:3} time={time() - start_time:5.1f}s "
                       f"halfmoves={env.num_halfmoves:3} {env.winner:12} "
                       f"{'by resign ' if env.resigned else '          '}")
+
 
                 # pretty_print(env, ("current_model", "current_model"))
                 self.buffer += data
@@ -105,9 +104,11 @@ def self_play_buffer(config, cur) -> (ChineseChessPlayer, list):
             action = black.action(env)
         env.step(action)
         print(f'Move: {action}')
-        print(f'{env.board}')
+        logger.info(f'Move: {action}')
+        # print(f'{env.board}')
         print(f'{env.board.fen()}')
-        print('=====================================')
+        logger.info(f'{env.board.fen()}')
+        logger.info('=====================================')
         if env.num_halfmoves >= config.play.max_game_length:
             env.adjudicate()
 

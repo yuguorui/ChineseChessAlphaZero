@@ -2,7 +2,7 @@ import argparse
 
 from logging import getLogger, disable
 
-from .lib.logger import setup_logger
+from .lib.logger import setup_basic_logger
 from .config import Config
 
 logger = getLogger(__name__)
@@ -24,7 +24,7 @@ def setup(config: Config, args):
     if args.total_step is not None:
         config.trainer.start_total_steps = args.total_step
     config.resource.create_directories()
-    setup_logger(config.resource.main_log_path)
+    setup_basic_logger(config.resource.main_log_path)
 
 
 def start():
