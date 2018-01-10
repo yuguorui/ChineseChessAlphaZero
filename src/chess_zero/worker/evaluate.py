@@ -1,4 +1,5 @@
 import os
+import shutil
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from logging import getLogger
 from multiprocessing import Manager
@@ -87,7 +88,8 @@ class EvaluateWorker:
     def move_model(self, model_dir):
         rc = self.config.resource
         new_dir = os.path.join(rc.model_dir, "copies", os.path.basename(model_dir))
-        os.rename(model_dir, new_dir)
+        # os.rename(model_dir, new_dir)
+        shutil.move(model_dir, new_dir)
 
     def load_current_model(self):
         model = ChessModel(self.config)

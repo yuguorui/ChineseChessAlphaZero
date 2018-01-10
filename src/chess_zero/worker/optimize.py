@@ -1,4 +1,5 @@
 import os
+import json
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
@@ -103,7 +104,8 @@ class OptimizeWorker:
                 futures.append(executor.submit(load_data_from_file, filename))
             while futures and len(self.dataset[0]) < self.config.trainer.dataset_size:
                 for x, y in zip(self.dataset, futures.popleft().result()):
-                    x.extend(y)
+                    if y:
+                        x.extend(y)
                 if len(self.filenames) > 0:
                     filename = self.filenames.popleft()
                     logger.debug(f"loading data from {filename}")
@@ -136,9 +138,13 @@ class OptimizeWorker:
 
 
 def load_data_from_file(filename):
-    data = read_game_data_from_file(filename)
-    print(f"load data: {filename}")
-    return convert_to_cheating_data(data)
+    try:
+        data = read_game_data_from_file(filename)
+        print(f"load data: {filename}")
+        return convert_to_cheating_data(data)
+    except json.JSONDecodeError as e:
+        logger.error(e)
+    return None
 
 
 def convert_to_cheating_data(data):

@@ -1,8 +1,8 @@
 class EvaluateConfig:
     def __init__(self):
         self.vram_frac = 0.85
-        self.game_num = 50
-        self.replace_rate = 0.55
+        self.game_num = 10
+        self.replace_rate = 0.53
         self.play_config = PlayConfig()
         self.play_config.simulation_num_per_move = 200
         self.play_config.thinking_loop = 1
@@ -10,7 +10,7 @@ class EvaluateConfig:
         self.play_config.tau_decay_rate = 0.6 # I need a better distribution...
         self.play_config.noise_eps = 0
         self.evaluate_latest_first = True
-        self.max_game_length = 1000
+        self.max_game_length = 300
 
 
 class PlayDataConfig:
@@ -27,7 +27,7 @@ class PlayConfig:
         self.max_processes = 3
         self.search_threads = 20
         self.vram_frac = 0.85
-        self.simulation_num_per_move = 100
+        self.simulation_num_per_move = 200
         self.thinking_loop = 1
         self.logging_thinking = False
         self.c_puct = 1.5
@@ -36,7 +36,7 @@ class PlayConfig:
         self.tau_decay_rate = 0.99
         self.virtual_loss = 3
         self.resign_threshold = -0.8
-        self.min_resign_turn = 5
+        self.min_resign_turn = 30
         self.max_game_length = 300
 
 

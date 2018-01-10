@@ -115,6 +115,7 @@ class ChessModel:
         if os.path.exists(config_path) and os.path.exists(weight_path):
             logger.debug(f"loading model from {config_path}")
             with open(config_path, "rt") as f:
+                # import pdb; pdb.set_trace()
                 self.model = Model.from_config(json.load(f))
             self.model.load_weights(weight_path)
             self.model._make_predict_function()
