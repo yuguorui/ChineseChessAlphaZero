@@ -48,9 +48,9 @@ class OptimizeWorker:
         self.filenames = None
         self.filenames = deque(get_game_data_filenames(self.config.resource))
         while not self.filenames:
-            print('wait for data...')
+            logger.info('waiting for data...')
             self.filenames = deque(get_game_data_filenames(self.config.resource))
-            sleep(10)
+            sleep(15)
         shuffle(self.filenames)
         total_steps = self.config.trainer.start_total_steps
 

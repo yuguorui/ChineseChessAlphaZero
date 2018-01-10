@@ -128,6 +128,8 @@ def play_game(config, cur, ng, current_white: bool) -> (float, ChineseChessEnv, 
         else:
             action = black.action(env)
         env.step(action)
+        logger.debug(action)
+        logger.debug(env.board.fen())
         if env.num_halfmoves >= config.eval.max_game_length:
             env.adjudicate()
 
