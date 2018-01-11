@@ -41,7 +41,7 @@ def read_game_data_from_file(path):
 
 class GameDataFileWatcher:
     def __init__(self, rc):
-        self.resource_config = rc
+        self.resource_config = rc.resource
         self.files = set()
 
     def clear(self):
@@ -50,5 +50,5 @@ class GameDataFileWatcher:
     def get_new_file(self):
         all_files = get_game_data_filenames(self.resource_config)
         new_files = set(all_files) - self.files
-        self.files += new_files
+        self.files |= new_files
         return sorted(list(new_files))
