@@ -10,7 +10,7 @@ class EvaluateConfig:
         self.play_config.tau_decay_rate = 0.6  # I need a better distribution...
         self.play_config.noise_eps = 0
         self.evaluate_latest_first = True
-        self.max_game_length = 1000
+        self.max_game_length = 300
 
 
 class PlayDataConfig:
@@ -24,7 +24,7 @@ class PlayDataConfig:
 
 class PlayConfig:
     def __init__(self):
-        self.max_processes = 3
+        self.max_processes = 1
         self.search_threads = 16
         self.vram_frac = 0.85
         self.simulation_num_per_move = 400
@@ -37,7 +37,7 @@ class PlayConfig:
         self.virtual_loss = 3
         self.resign_threshold = -0.8
         self.min_resign_turn = 5
-        self.max_game_length = 1000
+        self.max_game_length = 300
 
 
 class TrainerConfig:
