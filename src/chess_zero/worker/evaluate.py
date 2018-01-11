@@ -50,6 +50,7 @@ class EvaluateWorker:
             [ng_model.get_pipes(self.play_config.search_threads) for _ in range(self.play_config.max_processes)])
 
         futures = []
+        logger.info(f"current worker: {self.play_config.max_processes}")
         with ProcessPoolExecutor(max_workers=self.play_config.max_processes) as executor:
             for game_idx in range(self.config.eval.game_num):
                 fut = executor.submit(play_game, self.config, cur=self.cur_pipes, ng=ng_pipes,
@@ -76,9 +77,11 @@ class EvaluateWorker:
 
                 if len(results) - sum(results) >= self.config.eval.game_num * (1 - self.config.eval.replace_rate):
                     logger.info(f"lose count reach {results.count(0)} so give up challenge")
+                    # executor.shutdown(False)
                     return False
                 if sum(results) >= self.config.eval.game_num * self.config.eval.replace_rate:
                     logger.info(f"win count reach {results.count(1)} so change best model")
+                    # executor.shutdown(False)
                     return True
 
         win_rate = sum(results) / len(results)

@@ -91,6 +91,7 @@ class OptimizeWorker:
         os.makedirs(model_dir, exist_ok=True)
         config_path = os.path.join(model_dir, rc.next_generation_model_config_filename)
         weight_path = os.path.join(model_dir, rc.next_generation_model_weight_filename)
+        logger.info(f'saving current model: {config_path}')
         self.model.save(config_path, weight_path)
 
     def fill_queue(self):
@@ -104,7 +105,7 @@ class OptimizeWorker:
                 futures.append(executor.submit(load_data_from_file, filename))
             while futures and len(self.dataset[0]) < self.config.trainer.dataset_size:
                 for x, y in zip(self.dataset, futures.popleft().result()):
-                    if y:
+                    if y is not None:
                         x.extend(y)
                 if len(self.filenames) > 0:
                     filename = self.filenames.popleft()
