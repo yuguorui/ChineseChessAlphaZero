@@ -38,3 +38,17 @@ def write_game_data_to_file(path, data):
 def read_game_data_from_file(path):
     with open(path, "rt") as f:
         return json.load(f)
+
+class GameDataFileWatcher:
+    def __init__(self, rc):
+        self.resource_config = rc
+        self.files = set()
+
+    def clear(self):
+        self.files = set()
+
+    def get_new_file(self):
+        all_files = get_game_data_filenames(self.resource_config)
+        new_files = set(all_files) - self.files
+        self.files += new_files
+        return sorted(list(new_files))

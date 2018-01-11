@@ -17,7 +17,8 @@ from chess_zero.env.chess_env import (canon_input_planes, is_black_turn,
                                       testeval)
 from chess_zero.lib.data_helper import (get_game_data_filenames,
                                         get_next_generation_model_dirs,
-                                        read_game_data_from_file)
+                                        read_game_data_from_file,
+                                        GameDataFileWatcher)
 from chess_zero.lib.logger import setup_module_logger
 from chess_zero.lib.model_helper import load_best_model_weight
 
@@ -39,6 +40,7 @@ class OptimizeWorker:
         # this should just be a ring buffer i.e. queue of length 500,000 in AZ
         self.dataset = deque(), deque(), deque()
         self.executor = ProcessPoolExecutor(max_workers=config.trainer.cleaning_processes)
+        self.file_watcher = GameDataFileWatcher(config)
 
     def start(self):
         self.model = self.load_model()
@@ -47,10 +49,10 @@ class OptimizeWorker:
     def training(self):
         self.compile_model()
         self.filenames = None
-        self.filenames = deque(get_game_data_filenames(self.config.resource))
+        self.filenames = deque(self.file_watcher.get_new_file())
         while not self.filenames:
             logger.info('waiting for data...')
-            self.filenames = deque(get_game_data_filenames(self.config.resource))
+            self.filenames = deque(self.file_watcher.get_new_file())
             sleep(15)
         shuffle(self.filenames)
         total_steps = self.config.trainer.start_total_steps
@@ -95,6 +97,11 @@ class OptimizeWorker:
         self.model.save(config_path, weight_path)
 
     def fill_queue(self):
+        # check if there are some new files.
+        new_files = self.file_watcher.get_new_file()
+        logger.info(f'Found new files: f{new_files}')
+        self.filenames.extend(new_files)
+
         futures = deque()
         with ProcessPoolExecutor(max_workers=self.config.trainer.cleaning_processes) as executor:
             for _ in range(self.config.trainer.cleaning_processes):
