@@ -53,6 +53,7 @@ class ChineseChessPlayer:
 
         self.pipe_pool = pipes
         self.node_lock = defaultdict(Lock)
+        np.random.seed()
 
     def reset_mcts(self):
         self.tree = defaultdict(VisitStats)
